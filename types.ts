@@ -1,14 +1,13 @@
-
 export interface Review {
-  id: string;
-  product_id?: string;
-  product_name?: string;
-  rating: number;
-  review_text: string;
-  author_name: string;
-  created_at: string;
-  source?: string;
-  image_url?: string; // Added for feed display
+  id?: string | null;
+  product_id?: string | null;
+  product_name?: string | null;
+  rating?: number | null;
+  review_text?: string | null;
+  author_name?: string | null;
+  created_at?: string | null;
+  source?: string | null;
+  image_url?: string | null;
 }
 
 export interface Product {

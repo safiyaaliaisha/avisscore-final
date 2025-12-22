@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { fetchLatestReviews, fetchProductByName, fetchUniqueProducts } from './services/reviewService';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -30,7 +29,7 @@ export default function App() {
     try {
       setLoading(true);
       const [reviews, names] = await Promise.all([
-        fetchLatestReviews(6),
+        fetchLatestReviews(12),
         fetchUniqueProducts()
       ]);
       setLatestReviews(reviews);
@@ -45,8 +44,8 @@ export default function App() {
   const filteredReviews = useMemo(() => {
     if (!query.trim() || product) return latestReviews;
     return latestReviews.filter(rev => 
-      rev.product_name?.toLowerCase().includes(query.toLowerCase()) ||
-      rev.review_text?.toLowerCase().includes(query.toLowerCase())
+      (rev.product_name?.toLowerCase() || '').includes(query.toLowerCase()) ||
+      (rev.review_text?.toLowerCase() || '').includes(query.toLowerCase())
     );
   }, [query, latestReviews, product]);
 
@@ -85,7 +84,7 @@ export default function App() {
       : `Check out this AI-powered review of ${phoneName} on AvisScore!`;
     const url = window.location.href;
     navigator.clipboard.writeText(`${text} ${url}`);
-    alert('Lien copié dans le presse-papier !');
+    alert('Lien copié !');
   };
 
   const handleSearch = async (e?: React.FormEvent) => {
@@ -187,9 +186,10 @@ export default function App() {
     }
   };
 
-  const NumericalRating = ({ rating }: { rating: number }) => {
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 >= 0.5;
+  const NumericalRating = ({ rating }: { rating?: number | null }) => {
+    const val = rating || 0;
+    const fullStars = Math.floor(val);
+    const hasHalfStar = val % 1 >= 0.5;
     return (
       <div className="flex items-center gap-2">
         <div className="flex text-yellow-400 gap-0.5">
@@ -197,14 +197,13 @@ export default function App() {
             <i key={i} className={`${i < fullStars ? 'fas' : i === fullStars && hasHalfStar ? 'fas fa-star-half-alt' : 'far'} fa-star text-[10px]`}></i>
           ))}
         </div>
-        <span className="text-[11px] font-black text-slate-300">{rating.toFixed(1)}</span>
+        <span className="text-[11px] font-black text-slate-300">{val.toFixed(1)}</span>
       </div>
     );
   };
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-100 selection:bg-[#007AFF]/40">
-      {/* Premium Header */}
       <nav className="px-6 md:px-12 py-5 flex justify-between items-center bg-[#020617]/90 backdrop-blur-3xl sticky top-0 z-50 border-b border-white/5 shadow-2xl">
         <div 
           className="flex items-center gap-3 cursor-pointer group" 
@@ -269,7 +268,7 @@ export default function App() {
                     <div className="lg:col-span-5 relative group">
                       <div className="absolute -inset-4 bg-[#007AFF]/10 blur-[60px] opacity-0 group-hover:opacity-100 transition-opacity"></div>
                       <div className="glass-card rounded-[48px] p-6 border-white/10 shadow-2xl overflow-hidden relative">
-                        <img src={product.image_url} alt={product.name} className="w-full aspect-[4/5] object-cover rounded-[32px] group-hover:scale-105 transition-transform duration-700" />
+                        <img src={product.image_url || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&q=80&w=800'} alt={product.name} className="w-full aspect-[4/5] object-cover rounded-[32px] group-hover:scale-105 transition-transform duration-700" />
                       </div>
                     </div>
                     <div className="lg:col-span-7 space-y-10">
@@ -277,8 +276,8 @@ export default function App() {
                         <div className="flex justify-between items-start">
                           <span className="text-[#007AFF] text-[10px] font-black uppercase tracking-widest">Détails Technique</span>
                           <div className="flex gap-2">
-                             <button onClick={() => handleShare(product.name)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-[#007AFF] transition-colors"><i className="fas fa-share-nodes text-[10px]"></i></button>
-                             <button onClick={() => handleWhatsApp(product.name)} className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-green-500 transition-colors"><i className="fab fa-whatsapp text-[10px]"></i></button>
+                             <button onClick={() => handleShare(product.name)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-[#007AFF] transition-all hover:scale-110"><i className="fas fa-share-nodes text-sm"></i></button>
+                             <button onClick={() => handleWhatsApp(product.name)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-green-500 transition-all hover:scale-110"><i className="fab fa-whatsapp text-sm"></i></button>
                           </div>
                         </div>
                         <h2 className="text-6xl md:text-8xl font-black tracking-tighter">{product.name}</h2>
@@ -321,41 +320,40 @@ export default function App() {
                   <h3 className="text-4xl font-black tracking-tighter uppercase italic mb-12">Tests Récents</h3>
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
                     {filteredReviews.map((rev) => (
-                      <div key={rev.id} className="glass-card rounded-[40px] border-white/5 hover:border-[#007AFF]/40 hover:bg-white/[0.04] transition-all group relative flex flex-col h-full overflow-hidden shadow-2xl">
-                        {/* Actions Overlay */}
+                      <div key={rev.id || Math.random()} className="glass-card rounded-[40px] border-white/5 hover:border-[#007AFF]/40 hover:bg-white/[0.04] transition-all group relative flex flex-col h-full overflow-hidden shadow-2xl">
                         <div className="absolute top-6 right-6 flex items-center gap-2 z-20">
                           <button 
                             onClick={(e) => { e.stopPropagation(); handleShare(rev.product_name || 'this phone'); }}
-                            className="w-9 h-9 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-[#007AFF] transition-all opacity-0 group-hover:opacity-100"
+                            className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-[#007AFF] transition-all opacity-0 group-hover:opacity-100"
                           >
-                            <i className="fas fa-share-nodes text-[12px]"></i>
+                            <i className="fas fa-share-nodes text-sm"></i>
                           </button>
                           <button 
                             onClick={(e) => { e.stopPropagation(); handleWhatsApp(rev.product_name || 'this phone'); }}
-                            className="w-9 h-9 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-green-600 transition-all opacity-0 group-hover:opacity-100"
+                            className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-green-600 transition-all opacity-0 group-hover:opacity-100"
                           >
-                            <i className="fab fa-whatsapp text-[12px]"></i>
+                            <i className="fab fa-whatsapp text-sm"></i>
                           </button>
                         </div>
                         
                         <div className="aspect-video w-full overflow-hidden">
-                           <img src={rev.image_url} alt={rev.product_name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 grayscale group-hover:grayscale-0 opacity-60 group-hover:opacity-100" />
+                           <img src={rev.image_url || 'https://images.unsplash.com/photo-1556656793-062ff98782ee?auto=format&fit=crop&q=80&w=800'} alt={rev.product_name || 'Product'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 grayscale group-hover:grayscale-0 opacity-60 group-hover:opacity-100" />
                         </div>
                         
                         <div className="p-10 flex flex-col h-full">
                           <div className="space-y-4 mb-8">
                             <NumericalRating rating={rev.rating} />
-                            <h4 className="font-black text-2xl tracking-tight text-white group-hover:text-[#007AFF] transition-colors leading-tight">{rev.product_name}</h4>
+                            <h4 className="font-black text-2xl tracking-tight text-white group-hover:text-[#007AFF] transition-colors leading-tight">{rev.product_name || 'Inconnu'}</h4>
                           </div>
-                          <p className="text-slate-400 text-lg italic mb-auto line-clamp-4 font-medium leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">"{rev.review_text}"</p>
+                          <p className="text-slate-400 text-lg italic mb-auto line-clamp-4 font-medium leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">"{rev.review_text || 'Aucun texte fourni.'}"</p>
                           <div className="flex items-center gap-4 pt-8 mt-10 border-t border-white/5">
-                            <div className="w-10 h-10 rounded-xl bg-slate-800 border border-white/10 flex items-center justify-center text-[10px] font-black text-slate-500 uppercase">{rev.author_name.charAt(0)}</div>
+                            <div className="w-10 h-10 rounded-xl bg-slate-800 border border-white/10 flex items-center justify-center text-[10px] font-black text-slate-500 uppercase">{(rev.author_name || 'U').charAt(0)}</div>
                             <div>
-                              <p className="text-[10px] font-black uppercase tracking-widest text-white">{rev.author_name}</p>
-                              <p className="text-[9px] text-slate-600 font-bold uppercase tracking-widest mt-0.5">{new Date(rev.created_at).toLocaleDateString()}</p>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-white">{rev.author_name || 'Utilisateur'}</p>
+                              <p className="text-[9px] text-slate-600 font-bold uppercase tracking-widest mt-0.5">{rev.created_at ? new Date(rev.created_at).toLocaleDateString() : 'Date inconnue'}</p>
                             </div>
                             <div className="ml-auto flex items-center gap-2">
-                               <button onClick={(e) => { e.stopPropagation(); handleCopyLink(rev.product_name || 'this phone'); }} className="text-[10px] text-slate-500 hover:text-white transition-colors px-2 py-1"><i className="fas fa-link"></i></button>
+                               <button onClick={(e) => { e.stopPropagation(); handleCopyLink(rev.product_name || 'this phone'); }} className="text-[12px] text-slate-500 hover:text-white transition-colors px-2 py-1" title="Copy link"><i className="fas fa-link"></i></button>
                                <span className="text-[8px] font-black text-slate-500 uppercase tracking-tighter bg-white/5 px-3 py-1.5 rounded-full border border-white/5">{rev.source || 'AvisScore'}</span>
                             </div>
                           </div>
@@ -426,13 +424,12 @@ export default function App() {
 
             {comparisonResult && (
               <div className="space-y-24 animate-in zoom-in-95 duration-1000">
-                {/* Visual Summary Card */}
                 <div className="bg-gradient-to-br from-[#007AFF]/20 via-[#020617] to-transparent p-16 md:p-24 rounded-[64px] border border-white/10 relative overflow-hidden text-center shadow-2xl">
                   <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_transparent_100%)] from-[#007AFF]/5 opacity-50"></div>
                   <div className="relative z-10 space-y-10">
                      <div className="flex justify-center gap-4 mb-4">
-                        <button onClick={() => handleShare(`${selectedA} vs ${selectedB}`, true)} className="px-6 py-2 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-[#007AFF] transition-all flex items-center gap-3"><i className="fas fa-share-nodes"></i> Share Comparison</button>
-                        <button onClick={() => handleWhatsApp(`${selectedA} vs ${selectedB}`, true)} className="px-6 py-2 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-green-600 transition-all flex items-center gap-3"><i className="fab fa-whatsapp"></i> WhatsApp</button>
+                        <button onClick={() => handleShare(`${selectedA} vs ${selectedB}`, true)} className="px-6 py-2 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-[#007AFF] transition-all flex items-center gap-3 shadow-xl"><i className="fas fa-share-nodes"></i> Partager</button>
+                        <button onClick={() => handleWhatsApp(`${selectedA} vs ${selectedB}`, true)} className="px-6 py-2 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-green-600 transition-all flex items-center gap-3 shadow-xl"><i className="fab fa-whatsapp"></i> WhatsApp</button>
                      </div>
                      <h3 className="text-4xl md:text-5xl font-black italic tracking-tighter">La Synthèse AvisScore</h3>
                      <p className="text-2xl md:text-3xl text-slate-200 italic font-medium max-w-5xl mx-auto leading-snug opacity-90 tracking-tight">"{comparisonResult.summary}"</p>
@@ -443,7 +440,6 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* VS Comparison Sheet */}
                 <div className="overflow-hidden border border-white/10 rounded-[48px] shadow-[0_40px_100px_-20px_rgba(0,122,255,0.15)] bg-slate-900/40 backdrop-blur-3xl relative">
                   <div className="grid grid-cols-3 bg-white/5 border-b border-white/10">
                     <div className="p-10 text-[12px] font-black uppercase text-[#007AFF] tracking-[0.5em] flex items-center">Comparatif</div>
@@ -483,7 +479,7 @@ export default function App() {
           </div>
           <div className="flex flex-col items-end gap-2">
             <p className="text-slate-700 text-[10px] font-black uppercase tracking-[0.5em]">© 2025 AvisScore — All Tech Insights Reserved</p>
-            <p className="text-[#007AFF] text-[9px] font-black uppercase tracking-[0.3em]">Powered by Supabase Real-time & Gemini 3.0 Pro</p>
+            <p className="text-[#007AFF] text-[9px] font-black uppercase tracking-[0.3em]">Powered by Supabase & Gemini 3.0 Pro</p>
           </div>
         </div>
       </footer>
