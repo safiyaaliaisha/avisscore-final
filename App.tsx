@@ -97,51 +97,74 @@ export default function App() {
   };
 
   const performAIAnalysis = async (productName: string, reviews: Review[]) => {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const prompt = `Analyse le produit "${productName}". Format JSON strict: {"verdict": "synthèse", "pros": ["p1", "p2", "p3", "p4", "p5"], "cons": ["c1", "c2", "c3", "c4", "c5"], "score": 0-100, "marketMoment": "ACHETER", "marketBestPrice": "prix", "marketAlternative": "nom", "opportunityScore": 0-100, "opportunityLabel": "NIVEAU"}`;
     try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const prompt = `Analyse le produit "${productName}". Format JSON strict: {"verdict": "synthèse", "pros": ["p1", "p2", "p3", "p4", "p5"], "cons": ["c1", "c2", "c3", "c4", "c5"], "score": 0-100, "marketMoment": "ACHETER", "marketBestPrice": "prix", "marketAlternative": "nom", "opportunityScore": 0-100, "opportunityLabel": "NIVEAU"}`;
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: prompt,
         config: { responseMimeType: "application/json" }
       });
       return JSON.parse(response.text);
-    } catch (e) { return null; }
+    } catch (e) { 
+      console.error("AI Analysis Error:", e);
+      return null; 
+    }
   };
 
   const performComparisonAnalysis = async (nameA: string, nameB: string) => {
+    if (!nameA || !nameB) return;
     setShowLoadingOverlay(true);
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const prompt = `Compare "${nameA}" vs "${nameB}". Format JSON: {"summary": "...", "winner": "...", "criteria": [{"label": "...", "productA": "...", "productB": "...", "better": "A/B/Equal"}]}`;
     try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const prompt = `Compare "${nameA}" vs "${nameB}". Format JSON: {"summary": "...", "winner": "...", "criteria": [{"label": "...", "productA": "...", "productB": "...", "better": "A/B/Equal"}]}`;
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: prompt,
         config: { responseMimeType: "application/json" }
       });
       setCompData(JSON.parse(response.text));
-    } finally { setShowLoadingOverlay(false); }
+    } catch (err) {
+      console.error("Comparison Error:", err);
+    } finally { 
+      setShowLoadingOverlay(false); 
+    }
   };
 
   const handleSearch = async (productName: string) => {
+    if (!productName) return;
     setShowLoadingOverlay(true);
+    setAiVerdict(null); // Reset analysis while loading new one
+    
     try {
+      // 1. First fetch basic data from Supabase
       const { data: productData } = await supabase.from('products').select('*').ilike('name', `%${productName}%`).maybeSingle();
       const { data: reviewsData } = await supabase.from('my_reviews').select('*').ilike('product_name', `%${productName}%`);
+      
       let currentProduct = productData || { 
         id: 'gen-' + Date.now(), 
         name: reviewsData?.[0]?.product_name || productName, 
         image_url: reviewsData?.[0]?.image_url || undefined, 
-        description: reviewsData?.[0]?.review_text || "Synthèse IA.", 
+        description: reviewsData?.[0]?.review_text || "Analyse des données en cours par l'IA...", 
         price: 0, 
         category: "Tech" 
       };
+
+      // 2. Set view to detail immediately to avoid "stuck" feeling
       setProduct(currentProduct);
-      const analysis = await performAIAnalysis(currentProduct.name, reviewsData || []);
-      if (analysis) setAiVerdict({ ...analysis, totalReviews: (reviewsData || []).length || 4500 });
       setView('detail');
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } finally { setShowLoadingOverlay(false); }
+
+      // 3. Perform AI analysis in the background
+      const analysis = await performAIAnalysis(currentProduct.name, reviewsData || []);
+      if (analysis) {
+        setAiVerdict({ ...analysis, totalReviews: (reviewsData || []).length || 4500 });
+      }
+    } catch (err) {
+      console.error("Search Error:", err);
+    } finally { 
+      setShowLoadingOverlay(false); 
+    }
   };
 
   return (
@@ -166,7 +189,6 @@ export default function App() {
           <button className="text-[11px] font-black uppercase tracking-[0.3em] text-[#050A30]/50 hover:text-[#4158D0] transition-colors">FAQ</button>
           <button className="text-[11px] font-black uppercase tracking-[0.3em] text-[#050A30]/50 hover:text-[#4158D0] transition-colors">Contact</button>
         </div>
-        {/* Mobile Comparer Button */}
         <div className="lg:hidden">
           <button onClick={() => setView('comparison')} className="w-9 h-9 flex items-center justify-center rounded-full bg-[#4158D0]/10 text-[#4158D0]"><i className="fas fa-exchange-alt"></i></button>
         </div>
@@ -178,7 +200,7 @@ export default function App() {
             <div className="inline-block px-6 sm:px-8 py-2 sm:py-2.5 bg-white/30 rounded-full border border-white/50 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.5em] mb-8 sm:mb-12 shadow-sm italic">Intelligence Artificielle Certifiée v5.4</div>
             <h2 className="text-4xl sm:text-6xl md:text-8xl font-black italic uppercase mb-10 sm:mb-14 tracking-tighter leading-tight">Décodez la vérité <br/><span className="text-[#4158D0]">en un clic.</span></h2>
             
-            <form onSubmit={(e) => { e.preventDefault(); if(query) handleSearch(query); }} className="max-w-2xl mx-auto flex flex-col sm:flex-row gap-4 bg-white/40 p-2 sm:p-3 rounded-[30px] sm:rounded-[40px] shadow-2xl backdrop-blur-md border border-white/60 group">
+            <form onSubmit={(e) => { e.preventDefault(); handleSearch(query); }} className="max-w-2xl mx-auto flex flex-col sm:flex-row gap-4 bg-white/40 p-2 sm:p-3 rounded-[30px] sm:rounded-[40px] shadow-2xl backdrop-blur-md border border-white/60 group">
               <div className="flex flex-1 items-center px-4 sm:px-6">
                 <input type="text" placeholder="Entrez un modèle..." className="flex-1 bg-transparent py-4 sm:py-6 outline-none font-bold text-lg sm:text-xl placeholder:text-[#050A30]/60" value={query} onChange={(e) => setQuery(e.target.value)} />
                 <i className="fas fa-barcode text-2xl sm:text-3xl text-[#050A30]/40 group-hover:text-[#4158D0] transition-colors"></i>
@@ -212,7 +234,7 @@ export default function App() {
                <input type="text" placeholder="Modèle B..." value={compB} onChange={(e) => setCompB(e.target.value)} className="glass-card p-5 sm:p-6 rounded-[20px] sm:rounded-[30px] font-bold text-lg sm:text-xl outline-none placeholder:text-[#050A30]/40" />
             </div>
             <div className="text-center">
-               <button onClick={() => compA && compB && performComparisonAnalysis(compA, compB)} className="bg-[#050A30] text-white px-12 sm:px-20 py-5 sm:py-7 rounded-[25px] sm:rounded-[35px] font-black uppercase tracking-[0.3em] hover:bg-[#4158D0] shadow-2xl transition-all">Lancer le Duel</button>
+               <button onClick={() => performComparisonAnalysis(compA, compB)} className="bg-[#050A30] text-white px-12 sm:px-20 py-5 sm:py-7 rounded-[25px] sm:rounded-[35px] font-black uppercase tracking-[0.3em] hover:bg-[#4158D0] shadow-2xl transition-all">Lancer le Duel</button>
             </div>
             {compData && (
               <div className="mt-16 sm:mt-24 space-y-12">
@@ -236,12 +258,12 @@ export default function App() {
                   <h2 className="text-4xl sm:text-6xl md:text-8xl font-black italic uppercase tracking-tighter leading-tight sm:leading-none mb-8 sm:mb-10">{product.name}</h2>
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-10 p-5 sm:p-6 bg-white/50 backdrop-blur-3xl border border-white/80 rounded-[35px] sm:rounded-[50px] shadow-2xl w-full sm:w-fit sm:pr-14">
                     <div className="bg-[#050A30] text-white w-20 h-20 sm:w-28 sm:h-28 rounded-[25px] sm:rounded-[35px] flex flex-col items-center justify-center shadow-xl shrink-0">
-                       <span className="text-3xl sm:text-5xl font-black italic">{aiVerdict ? (aiVerdict.score / 10).toFixed(1) : "9.2"}</span>
+                       <span className="text-3xl sm:text-5xl font-black italic">{aiVerdict ? (aiVerdict.score / 10).toFixed(1) : "—"}</span>
                        <span className="text-[8px] sm:text-[10px] font-bold opacity-40 uppercase">Score IA</span>
                     </div>
                     <div className="flex flex-col gap-4 sm:gap-6 w-full">
                        <div className="flex items-center gap-3 sm:gap-4 bg-white/60 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full border border-white shadow-sm w-full sm:w-auto overflow-hidden">
-                          <StarRating rating={4.8} size="text-[14px] sm:text-[18px]" />
+                          <StarRating rating={aiVerdict ? 4.8 : 0} size="text-[14px] sm:text-[18px]" />
                           <div className="h-4 w-[1px] bg-black/10 mx-1"></div>
                           <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.1em] sm:tracking-[0.3em] text-[#050A30]/60 italic truncate">Indice de Confiance</span>
                        </div>
@@ -253,26 +275,28 @@ export default function App() {
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10 w-full">
-                  <div className="glass-card p-8 sm:p-12 rounded-[35px] sm:rounded-[45px] bg-white/50">
+                  <div className="glass-card p-8 sm:p-12 rounded-[35px] sm:rounded-[45px] bg-white/50 min-h-[250px]">
                     <h3 className="text-[11px] sm:text-[12px] font-black uppercase tracking-[0.4em] sm:tracking-[0.5em] mb-6 sm:mb-10 text-emerald-600 flex justify-between">Points Forts <i className="fas fa-check-circle"></i></h3>
                     <ul className="space-y-4 sm:space-y-5">
-                      {aiVerdict?.pros.map((p, i) => (
+                      {aiVerdict ? aiVerdict.pros.map((p, i) => (
                         <li key={i} className="text-[13px] sm:text-[15px] font-bold flex gap-3 sm:gap-4"><span className="w-2 h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></span> <span className="opacity-80">{p}</span></li>
-                      ))}
+                      )) : <div className="animate-pulse h-4 bg-black/5 rounded-full w-3/4"></div>}
                     </ul>
                   </div>
-                  <div className="glass-card p-8 sm:p-12 rounded-[35px] sm:rounded-[45px] bg-white/50">
+                  <div className="glass-card p-8 sm:p-12 rounded-[35px] sm:rounded-[45px] bg-white/50 min-h-[250px]">
                     <h3 className="text-[11px] sm:text-[12px] font-black uppercase tracking-[0.4em] sm:tracking-[0.5em] mb-6 sm:mb-10 text-rose-600 flex justify-between">Points Faibles <i className="fas fa-times-circle"></i></h3>
                     <ul className="space-y-4 sm:space-y-5">
-                      {aiVerdict?.cons.map((c, i) => (
+                      {aiVerdict ? aiVerdict.cons.map((c, i) => (
                         <li key={i} className="text-[13px] sm:text-[15px] font-bold flex gap-3 sm:gap-4"><span className="w-2 h-2 rounded-full bg-rose-500 mt-2 shrink-0"></span> <span className="opacity-80">{c}</span></li>
-                      ))}
+                      )) : <div className="animate-pulse h-4 bg-black/5 rounded-full w-3/4"></div>}
                     </ul>
                   </div>
                 </div>
                 <div className="glass-card p-8 sm:p-14 rounded-[35px] sm:rounded-[50px] bg-white/70 shadow-2xl border-white w-full">
                   <h3 className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.5em] sm:tracking-[0.6em] mb-6 sm:mb-10 text-[#050A30]/30 italic">DESCRIPTION</h3>
-                  <p className="text-[#050A30]/90 font-bold italic leading-relaxed sm:leading-loose text-xl sm:text-2xl border-l-[6px] sm:border-l-[10px] border-[#4158D0] pl-6 sm:pl-12">{product.description}</p>
+                  <p className="text-[#050A30]/90 font-bold italic leading-relaxed sm:leading-loose text-xl sm:text-2xl border-l-[6px] sm:border-l-[10px] border-[#4158D0] pl-6 sm:pl-12">
+                    {product.description}
+                  </p>
                 </div>
               </div>
             </div>
