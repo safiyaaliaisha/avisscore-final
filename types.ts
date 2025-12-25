@@ -1,3 +1,4 @@
+
 export interface Review {
   id?: string | null;
   product_id?: string | null;
@@ -29,9 +30,19 @@ export interface Product {
 
 export interface AIAnalysis {
   verdict: string;
+  punchyVerdict: string;
   pros: string[];
   cons: string[];
   score: number;
+  sourceScores: { site: string; score: number }[];
+  totalReviews: number;
+  buyingWindow: string;
+  buyingConfidence: number;
+  marketMoment: string;
+  marketBestPrice: string;
+  marketAlternative: string;
+  opportunityScore: number;
+  opportunityLabel: string;
 }
 
 export interface ComparisonData {
@@ -41,6 +52,7 @@ export interface ComparisonData {
     label: string;
     productA: string;
     productB: string;
+    better: 'A' | 'B' | 'Equal';
   }[];
 }
 

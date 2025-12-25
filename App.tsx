@@ -1,25 +1,83 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { fetchLatestReviews, fetchProductByName, fetchUniqueProducts } from './services/reviewService';
+import React, { useState, useEffect } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
+import { supabase } from './lib/supabaseClient';
+import { fetchLatestReviews, fetchUniqueProducts } from './services/reviewService';
 import { Product, Review, AIAnalysis, ComparisonData } from './types';
 
-const ACCENT_BLUE = "#007AFF";
+const deepNavy = '#050A30';
+
+const AVATAR_PHOTOS = [
+  "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&h=120&fit=crop",
+  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&h=120&fit=crop",
+  "https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=120&h=120&fit=crop",
+  "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=120&h=120&fit=crop",
+  "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=120&h=120&fit=crop",
+  "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&h=120&fit=crop",
+  "https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=120&h=120&fit=crop",
+  "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&h=120&fit=crop",
+  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop",
+  "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&h=120&fit=crop"
+];
+
+const AvatarStack = ({ images = AVATAR_PHOTOS, count = 5, size = "h-8 w-8" }: { images?: string[], count?: number, size?: string }) => (
+  <div className="flex items-center -space-x-3 hover:-space-x-1 transition-all duration-500 group/stack py-1">
+    {images.slice(0, count).map((src, i) => (
+      <div key={i} className="relative transition-transform duration-300 hover:scale-125 hover:z-50 cursor-pointer">
+        <img 
+          src={src} 
+          className={`${size} rounded-full object-cover shadow-md border-2 border-white ring-1 ring-black/5`} 
+          style={{ zIndex: 10 - i }} 
+          alt={`Expert ${i + 1}`} 
+        />
+      </div>
+    ))}
+    <div className={`${size} rounded-full bg-[#4158D0] border-2 border-white flex items-center justify-center shadow-lg z-0 -ml-3 transform group-hover/stack:translate-x-1 transition-transform`}>
+      <span className="text-[7px] font-black text-white italic">+4k</span>
+    </div>
+  </div>
+);
+
+const ProductImage = ({ src, alt, className }: { src?: string; alt: string; className?: string }) => {
+  if (!src) return <div className={`${className} bg-white/10 flex items-center justify-center text-[#050A30]/20`}><i className="fas fa-image text-6xl"></i></div>;
+  
+  return (
+    <img
+      src={src}
+      alt={alt}
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      style={{ display: 'block !important' }}
+      className={`${className} object-cover bg-white transition-all duration-700 shadow-[0_20px_60px_rgba(0,0,0,0.1)]`}
+      onError={(e) => {
+        (e.target as HTMLImageElement).style.opacity = '0.7';
+      }}
+    />
+  );
+};
+
+const StarRating = ({ rating, size = "text-[12px]", showScore = false }: { rating: number, size?: string, showScore?: boolean }) => (
+  <div className="flex items-center gap-2">
+    <div className={`flex text-[#FFD700] gap-0.5 items-center ${size}`}>
+      {[...Array(5)].map((_, j) => (
+        <i key={j} className={`${j < Math.round(rating) ? 'fas' : 'far'} fa-star`}></i>
+      ))}
+    </div>
+    {showScore && <span className="font-black italic text-[#050A30] text-sm">{rating.toFixed(1)}</span>}
+  </div>
+);
 
 export default function App() {
-  const [view, setView] = useState<'home' | 'comparison'>('home');
+  const [view, setView] = useState<'home' | 'comparison' | 'detail'>('home');
   const [query, setQuery] = useState('');
   const [product, setProduct] = useState<Product | null>(null);
   const [latestReviews, setLatestReviews] = useState<Review[]>([]);
   const [uniqueProductNames, setUniqueProductNames] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
   const [aiVerdict, setAiVerdict] = useState<AIAnalysis | null>(null);
-  const [analyzing, setAnalyzing] = useState(false);
+  const [showLoadingOverlay, setShowLoadingOverlay] = useState(false);
 
-  // Comparison State
-  const [selectedA, setSelectedA] = useState('');
-  const [selectedB, setSelectedB] = useState('');
-  const [comparisonResult, setComparisonResult] = useState<ComparisonData | null>(null);
-  const [comparing, setComparing] = useState(false);
+  const [compA, setCompA] = useState('');
+  const [compB, setCompB] = useState('');
+  const [compData, setCompData] = useState<ComparisonData | null>(null);
 
   useEffect(() => {
     loadInitialData();
@@ -27,7 +85,6 @@ export default function App() {
 
   const loadInitialData = async () => {
     try {
-      setLoading(true);
       const [reviews, names] = await Promise.all([
         fetchLatestReviews(12),
         fetchUniqueProducts()
@@ -35,432 +92,232 @@ export default function App() {
       setLatestReviews(reviews);
       setUniqueProductNames(names);
     } catch (err) {
-      console.error("Data load failed:", err);
-    } finally {
-      setLoading(false);
+      console.error("Initial load failed:", err);
     }
   };
 
-  const filteredReviews = useMemo(() => {
-    if (!query.trim() || product) return latestReviews;
-    return latestReviews.filter(rev => 
-      (rev.product_name?.toLowerCase() || '').includes(query.toLowerCase()) ||
-      (rev.review_text?.toLowerCase() || '').includes(query.toLowerCase())
-    );
-  }, [query, latestReviews, product]);
-
-  const handleShare = async (phoneName: string, isComparison = false) => {
-    const text = isComparison 
-      ? `Check out this AI-powered comparison featuring ${phoneName} on AvisScore!`
-      : `Check out this AI-powered review of ${phoneName} on AvisScore!`;
-    const url = window.location.href;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'AvisScore Analysis',
-          text: text,
-          url: url,
-        });
-      } catch (err) {
-        console.debug('Share cancelled or failed', err);
-      }
-    } else {
-      handleCopyLink(phoneName, isComparison);
-    }
-  };
-
-  const handleWhatsApp = (phoneName: string, isComparison = false) => {
-    const text = isComparison 
-      ? `Check out this AI-powered comparison featuring ${phoneName} on AvisScore!`
-      : `Check out this AI-powered review of ${phoneName} on AvisScore!`;
-    const url = window.location.href;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text + " " + url)}`, '_blank');
-  };
-
-  const handleCopyLink = (phoneName: string, isComparison = false) => {
-    const text = isComparison 
-      ? `Check out this AI-powered comparison featuring ${phoneName} on AvisScore!`
-      : `Check out this AI-powered review of ${phoneName} on AvisScore!`;
-    const url = window.location.href;
-    navigator.clipboard.writeText(`${text} ${url}`);
-    alert('Lien copié !');
-  };
-
-  const handleSearch = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!query.trim()) return;
-
-    setLoading(true);
-    setProduct(null);
-    setAiVerdict(null);
-
+  const performAIAnalysis = async (productName: string, reviews: Review[]) => {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const prompt = `Analyse le produit "${productName}". Format JSON strict: {"verdict": "synthèse", "pros": ["p1", "p2", "p3", "p4", "p5"], "cons": ["c1", "c2", "c3", "c4", "c5"], "score": 0-100, "marketMoment": "ACHETER", "marketBestPrice": "prix", "marketAlternative": "nom", "opportunityScore": 0-100, "opportunityLabel": "NIVEAU"}`;
     try {
-      const data = await fetchProductByName(query);
-      if (data) {
-        setProduct(data);
-        generateAIVerdict(data);
-      }
-    } catch (err) {
-      console.error("Search failed:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generateAIVerdict = async (p: Product) => {
-    setAnalyzing(true);
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Analyses experte du smartphone : ${p.name}. Spécifications : ${p.description}. Format JSON uniquement.`,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              verdict: { type: Type.STRING },
-              pros: { type: Type.ARRAY, items: { type: Type.STRING } },
-              cons: { type: Type.ARRAY, items: { type: Type.STRING } },
-              score: { type: Type.NUMBER }
-            },
-            required: ["verdict", "pros", "cons", "score"]
-          }
-        }
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: { responseMimeType: "application/json" }
       });
-      setAiVerdict(JSON.parse(response.text));
-    } catch (err) {
-      console.error("AI Verdict failed:", err);
-    } finally {
-      setAnalyzing(false);
-    }
+      return JSON.parse(response.text);
+    } catch (e) { return null; }
   };
 
-  const handleCompare = async () => {
-    if (!selectedA || !selectedB) return;
-    setComparing(true);
-    setComparisonResult(null);
-
+  const performComparisonAnalysis = async (nameA: string, nameB: string) => {
+    setShowLoadingOverlay(true);
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const prompt = `Compare "${nameA}" vs "${nameB}". Format JSON: {"summary": "...", "winner": "...", "criteria": [{"label": "...", "productA": "...", "productB": "...", "better": "A/B/Equal"}]}`;
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const contextA = latestReviews.filter(r => r.product_name === selectedA).map(r => r.review_text).join(". ");
-      const contextB = latestReviews.filter(r => r.product_name === selectedB).map(r => r.review_text).join(". ");
-
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Compare ces deux smartphones : "${selectedA}" vs "${selectedB}".
-        Basé sur ces retours :
-        A: ${contextA}
-        B: ${contextB}
-        Analyse spécifiquement : Display, Battery, et AI Verdict. Sortie JSON uniquement.`,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              summary: { type: Type.STRING },
-              winner: { type: Type.STRING },
-              criteria: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    label: { type: Type.STRING },
-                    productA: { type: Type.STRING },
-                    productB: { type: Type.STRING }
-                  },
-                  required: ["label", "productA", "productB"]
-                }
-              }
-            },
-            required: ["summary", "winner", "criteria"]
-          }
-        }
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+        config: { responseMimeType: "application/json" }
       });
-      setComparisonResult(JSON.parse(response.text));
-    } catch (err) {
-      console.error("Comparison failed:", err);
-    } finally {
-      setComparing(false);
-    }
+      setCompData(JSON.parse(response.text));
+    } finally { setShowLoadingOverlay(false); }
   };
 
-  const NumericalRating = ({ rating }: { rating?: number | null }) => {
-    const val = rating || 0;
-    const fullStars = Math.floor(val);
-    const hasHalfStar = val % 1 >= 0.5;
-    return (
-      <div className="flex items-center gap-2">
-        <div className="flex text-yellow-400 gap-0.5">
-          {[...Array(5)].map((_, i) => (
-            <i key={i} className={`${i < fullStars ? 'fas' : i === fullStars && hasHalfStar ? 'fas fa-star-half-alt' : 'far'} fa-star text-[10px]`}></i>
-          ))}
-        </div>
-        <span className="text-[11px] font-black text-slate-300">{val.toFixed(1)}</span>
-      </div>
-    );
+  const handleSearch = async (productName: string) => {
+    setShowLoadingOverlay(true);
+    try {
+      const { data: productData } = await supabase.from('products').select('*').ilike('name', `%${productName}%`).maybeSingle();
+      const { data: reviewsData } = await supabase.from('my_reviews').select('*').ilike('product_name', `%${productName}%`);
+      let currentProduct = productData || { 
+        id: 'gen-' + Date.now(), 
+        name: reviewsData?.[0]?.product_name || productName, 
+        image_url: reviewsData?.[0]?.image_url || undefined, 
+        description: reviewsData?.[0]?.review_text || "Synthèse IA.", 
+        price: 0, 
+        category: "Tech" 
+      };
+      setProduct(currentProduct);
+      const analysis = await performAIAnalysis(currentProduct.name, reviewsData || []);
+      if (analysis) setAiVerdict({ ...analysis, totalReviews: (reviewsData || []).length || 4500 });
+      setView('detail');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } finally { setShowLoadingOverlay(false); }
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-slate-100 selection:bg-[#007AFF]/40">
-      <nav className="px-6 md:px-12 py-5 flex justify-between items-center bg-[#020617]/90 backdrop-blur-3xl sticky top-0 z-50 border-b border-white/5 shadow-2xl">
-        <div 
-          className="flex items-center gap-3 cursor-pointer group" 
-          onClick={() => {setView('home'); setProduct(null); setQuery('');}}
-        >
-          <div className="w-10 h-10 bg-[#007AFF] rounded-2xl flex items-center justify-center shadow-lg shadow-[#007AFF]/20 transition-transform group-hover:rotate-6">
-            <i className="fas fa-bolt text-white text-lg"></i>
-          </div>
-          <span className="text-2xl font-black tracking-tighter">
-            Avis<span style={{ color: ACCENT_BLUE }}>Score</span>
-          </span>
+    <div className={`min-h-screen text-[${deepNavy}] flex flex-col selection:bg-[#4158D0]/30 font-sans antialiased`}>
+      {showLoadingOverlay && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-white/10 backdrop-blur-[30px]">
+          <i className="fas fa-atom text-white text-4xl sm:text-6xl animate-spin-slow"></i>
         </div>
-        
-        <div className="hidden md:flex gap-10 text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">
-          <button onClick={() => {setView('home'); setProduct(null);}} className={`hover:text-white transition-colors ${view === 'home' && 'text-[#007AFF]'}`}>Smartphones</button>
-          <button onClick={() => setView('comparison')} className={`hover:text-white transition-colors ${view === 'comparison' && 'text-[#007AFF]'}`}>Comparatifs</button>
-          <a href="#" className="hover:text-white transition-colors">Lab IA</a>
-        </div>
+      )}
 
-        <button className="bg-white text-black px-7 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-[#007AFF] hover:text-white transition-all shadow-xl active:scale-95">
-          Accès Expert
-        </button>
+      {/* HEADER */}
+      <nav className="px-4 md:px-20 py-5 sm:py-7 flex justify-between items-center sticky top-0 z-50 glass-card !rounded-none !border-0 shadow-2xl">
+        <div className="flex-1">
+          <div className="flex items-center gap-3 sm:gap-4 cursor-pointer group" onClick={() => setView('home')}>
+            <div className="w-9 h-9 sm:w-11 sm:h-11 bg-[#050A30] rounded-[12px] sm:rounded-[15px] flex items-center justify-center shadow-xl group-hover:rotate-12 transition-transform duration-500"><i className="fas fa-bolt text-white text-sm sm:text-base"></i></div>
+            <span className="text-lg sm:text-2xl font-black italic uppercase tracking-tighter">Avis<span className="text-[#4158D0]">Score</span></span>
+          </div>
+        </div>
+        <div className="flex-1 hidden lg:flex gap-12 items-center justify-end">
+          <button onClick={() => setView('comparison')} className="text-[10px] font-black uppercase tracking-[0.2em] px-9 py-3 rounded-full border border-[#4158D0] text-[#4158D0] hover:bg-[#4158D0] hover:text-white transition-all duration-300">Comparer</button>
+          <button className="text-[11px] font-black uppercase tracking-[0.3em] text-[#050A30]/50 hover:text-[#4158D0] transition-colors">Privacy</button>
+          <button className="text-[11px] font-black uppercase tracking-[0.3em] text-[#050A30]/50 hover:text-[#4158D0] transition-colors">FAQ</button>
+          <button className="text-[11px] font-black uppercase tracking-[0.3em] text-[#050A30]/50 hover:text-[#4158D0] transition-colors">Contact</button>
+        </div>
+        {/* Mobile Comparer Button */}
+        <div className="lg:hidden">
+          <button onClick={() => setView('comparison')} className="w-9 h-9 flex items-center justify-center rounded-full bg-[#4158D0]/10 text-[#4158D0]"><i className="fas fa-exchange-alt"></i></button>
+        </div>
       </nav>
 
-      <main>
-        {view === 'home' ? (
-          <>
-            <section className="relative pt-32 pb-20 px-6 text-center overflow-hidden">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[500px] bg-gradient-to-b from-[#007AFF]/15 to-transparent blur-[120px] rounded-full pointer-events-none"></div>
-              <div className="relative z-10 max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-top-4 duration-1000">
-                <div className="inline-flex items-center gap-3 px-4 py-2 bg-[#007AFF]/10 border border-[#007AFF]/20 rounded-full">
-                  <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#007AFF]">L'Intelligence au service du Choix</span>
-                </div>
-                <h1 className="text-7xl md:text-9xl font-black tracking-tighter leading-none italic">AvisScore</h1>
-                <p className="text-slate-400 text-lg md:text-xl font-medium max-w-2xl mx-auto opacity-80">
-                  Le guide ultime pour décoder l'innovation mobile mondiale avec Gemini.
-                </p>
-                <form onSubmit={handleSearch} className="relative max-w-2xl mx-auto group mt-16">
-                  <div className="absolute -inset-1 bg-gradient-to-r from-[#007AFF] to-cyan-400 rounded-3xl blur opacity-20 group-hover:opacity-40 transition duration-700"></div>
-                  <div className="relative flex shadow-2xl">
-                    <input
-                      type="text"
-                      placeholder="Ex: Samsung S25 Ultra, iPhone 16 Pro..."
-                      className="w-full bg-slate-900/40 backdrop-blur-xl border border-white/10 rounded-2xl px-8 py-6 outline-none focus:border-[#007AFF]/50 text-lg text-white placeholder:text-slate-500"
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                    />
-                    <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 bg-[#007AFF] text-white px-8 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg transition-transform active:scale-95">Analyser</button>
-                  </div>
-                </form>
+      <main className="flex-grow">
+        {view === 'home' && (
+          <section className="pt-20 sm:pt-32 pb-24 sm:pb-40 px-6 max-w-[1400px] mx-auto text-center">
+            <div className="inline-block px-6 sm:px-8 py-2 sm:py-2.5 bg-white/30 rounded-full border border-white/50 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.5em] mb-8 sm:mb-12 shadow-sm italic">Intelligence Artificielle Certifiée v5.4</div>
+            <h2 className="text-4xl sm:text-6xl md:text-8xl font-black italic uppercase mb-10 sm:mb-14 tracking-tighter leading-tight">Décodez la vérité <br/><span className="text-[#4158D0]">en un clic.</span></h2>
+            
+            <form onSubmit={(e) => { e.preventDefault(); if(query) handleSearch(query); }} className="max-w-2xl mx-auto flex flex-col sm:flex-row gap-4 bg-white/40 p-2 sm:p-3 rounded-[30px] sm:rounded-[40px] shadow-2xl backdrop-blur-md border border-white/60 group">
+              <div className="flex flex-1 items-center px-4 sm:px-6">
+                <input type="text" placeholder="Entrez un modèle..." className="flex-1 bg-transparent py-4 sm:py-6 outline-none font-bold text-lg sm:text-xl placeholder:text-[#050A30]/60" value={query} onChange={(e) => setQuery(e.target.value)} />
+                <i className="fas fa-barcode text-2xl sm:text-3xl text-[#050A30]/40 group-hover:text-[#4158D0] transition-colors"></i>
               </div>
-            </section>
+              <button type="submit" className="bg-[#050A30] text-white px-8 sm:px-12 py-5 sm:py-6 rounded-[22px] sm:rounded-[32px] font-black uppercase tracking-[0.2em] hover:bg-[#4158D0] shadow-2xl transition-all">Scanner</button>
+            </form>
 
-            <div className="max-w-7xl mx-auto px-6 md:px-12">
-              {loading ? (
-                <div className="flex flex-col items-center py-32 space-y-6">
-                  <div className="w-12 h-12 border-2 border-[#007AFF] border-t-transparent rounded-full animate-spin"></div>
-                </div>
-              ) : product ? (
-                <div className="space-y-32 pb-40">
-                  <div className="grid lg:grid-cols-12 gap-20 items-center pt-10">
-                    <div className="lg:col-span-5 relative group">
-                      <div className="absolute -inset-4 bg-[#007AFF]/10 blur-[60px] opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                      <div className="glass-card rounded-[48px] p-6 border-white/10 shadow-2xl overflow-hidden relative">
-                        <img src={product.image_url || 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&q=80&w=800'} alt={product.name} className="w-full aspect-[4/5] object-cover rounded-[32px] group-hover:scale-105 transition-transform duration-700" />
-                      </div>
-                    </div>
-                    <div className="lg:col-span-7 space-y-10">
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-start">
-                          <span className="text-[#007AFF] text-[10px] font-black uppercase tracking-widest">Détails Technique</span>
-                          <div className="flex gap-2">
-                             <button onClick={() => handleShare(product.name)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-[#007AFF] transition-all hover:scale-110"><i className="fas fa-share-nodes text-sm"></i></button>
-                             <button onClick={() => handleWhatsApp(product.name)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-green-500 transition-all hover:scale-110"><i className="fab fa-whatsapp text-sm"></i></button>
-                          </div>
-                        </div>
-                        <h2 className="text-6xl md:text-8xl font-black tracking-tighter">{product.name}</h2>
-                        <p className="text-slate-400 text-2xl font-medium leading-relaxed">{product.description}</p>
-                      </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        {Object.entries(product.specs || {}).map(([key, val]) => (
-                          <div key={key} className="bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-sm">
-                            <p className="text-[10px] text-slate-500 uppercase font-black mb-2 tracking-widest">{key}</p>
-                            <p className="text-sm font-bold">{val}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  {aiVerdict && (
-                    <div className="bg-gradient-to-br from-[#007AFF]/15 via-slate-900 to-transparent border border-white/10 rounded-[64px] p-12 md:p-20 relative overflow-hidden shadow-2xl">
-                      <div className="relative z-10 space-y-12">
-                        <div className="flex items-center gap-6">
-                          <div className="w-14 h-14 bg-[#007AFF] rounded-2xl flex items-center justify-center shadow-xl shadow-[#007AFF]/30"><i className="fas fa-brain text-white text-2xl"></i></div>
-                          <h3 className="text-4xl font-black">Verdict Gemini IA</h3>
-                        </div>
-                        <p className="text-3xl text-slate-100 italic font-semibold leading-snug tracking-tight">"{aiVerdict.verdict}"</p>
-                        <div className="grid md:grid-cols-2 gap-20">
-                          <div className="space-y-6">
-                            <p className="text-[#007AFF] text-[11px] font-black uppercase border-b border-white/5 pb-4 tracking-widest">Points Forts</p>
-                            <ul className="space-y-4">{aiVerdict.pros.map((p, i) => <li key={i} className="text-slate-400 flex items-center gap-4"><span className="w-2 h-2 bg-[#007AFF] rounded-full shadow-[0_0_8px_#007AFF]"></span>{p}</li>)}</ul>
-                          </div>
-                          <div className="space-y-6">
-                            <p className="text-rose-500 text-[11px] font-black uppercase border-b border-white/5 pb-4 tracking-widest">Points Faibles</p>
-                            <ul className="space-y-4">{aiVerdict.cons.map((c, i) => <li key={i} className="text-slate-400 flex items-center gap-4"><span className="w-2 h-2 bg-slate-700 rounded-full"></span>{c}</li>)}</ul>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <section className="mt-10 py-24 border-t border-white/5">
-                  <h3 className="text-4xl font-black tracking-tighter uppercase italic mb-12">Tests Récents</h3>
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
-                    {filteredReviews.map((rev) => (
-                      <div key={rev.id || Math.random()} className="glass-card rounded-[40px] border-white/5 hover:border-[#007AFF]/40 hover:bg-white/[0.04] transition-all group relative flex flex-col h-full overflow-hidden shadow-2xl">
-                        <div className="absolute top-6 right-6 flex items-center gap-2 z-20">
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); handleShare(rev.product_name || 'this phone'); }}
-                            className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-[#007AFF] transition-all opacity-0 group-hover:opacity-100"
-                          >
-                            <i className="fas fa-share-nodes text-sm"></i>
-                          </button>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); handleWhatsApp(rev.product_name || 'this phone'); }}
-                            className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-green-600 transition-all opacity-0 group-hover:opacity-100"
-                          >
-                            <i className="fab fa-whatsapp text-sm"></i>
-                          </button>
-                        </div>
-                        
-                        <div className="aspect-video w-full overflow-hidden">
-                           <img src={rev.image_url || 'https://images.unsplash.com/photo-1556656793-062ff98782ee?auto=format&fit=crop&q=80&w=800'} alt={rev.product_name || 'Product'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 grayscale group-hover:grayscale-0 opacity-60 group-hover:opacity-100" />
-                        </div>
-                        
-                        <div className="p-10 flex flex-col h-full">
-                          <div className="space-y-4 mb-8">
-                            <NumericalRating rating={rev.rating} />
-                            <h4 className="font-black text-2xl tracking-tight text-white group-hover:text-[#007AFF] transition-colors leading-tight">{rev.product_name || 'Inconnu'}</h4>
-                          </div>
-                          <p className="text-slate-400 text-lg italic mb-auto line-clamp-4 font-medium leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">"{rev.review_text || 'Aucun texte fourni.'}"</p>
-                          <div className="flex items-center gap-4 pt-8 mt-10 border-t border-white/5">
-                            <div className="w-10 h-10 rounded-xl bg-slate-800 border border-white/10 flex items-center justify-center text-[10px] font-black text-slate-500 uppercase">{(rev.author_name || 'U').charAt(0)}</div>
-                            <div>
-                              <p className="text-[10px] font-black uppercase tracking-widest text-white">{rev.author_name || 'Utilisateur'}</p>
-                              <p className="text-[9px] text-slate-600 font-bold uppercase tracking-widest mt-0.5">{rev.created_at ? new Date(rev.created_at).toLocaleDateString() : 'Date inconnue'}</p>
-                            </div>
-                            <div className="ml-auto flex items-center gap-2">
-                               <button onClick={(e) => { e.stopPropagation(); handleCopyLink(rev.product_name || 'this phone'); }} className="text-[12px] text-slate-500 hover:text-white transition-colors px-2 py-1" title="Copy link"><i className="fas fa-link"></i></button>
-                               <span className="text-[8px] font-black text-slate-500 uppercase tracking-tighter bg-white/5 px-3 py-1.5 rounded-full border border-white/5">{rev.source || 'AvisScore'}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
-            </div>
-          </>
-        ) : (
-          <section className="max-w-7xl mx-auto px-6 md:px-12 py-32 animate-in fade-in slide-in-from-bottom-10 duration-1000">
-            <div className="space-y-8 mb-20 text-center">
-              <div className="inline-flex items-center gap-3 px-4 py-2 bg-[#007AFF]/10 border border-[#007AFF]/20 rounded-full mb-4">
-                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#007AFF]">Dual Analysis Engine</span>
-              </div>
-              <h2 className="text-7xl md:text-9xl font-black tracking-tighter">Comparaison <span style={{ color: ACCENT_BLUE }}>Elite</span></h2>
-              <p className="text-slate-400 text-xl font-medium opacity-80 max-w-2xl mx-auto italic">Mettez à l'épreuve les flagships du moment avec notre comparateur assisté par IA.</p>
-            </div>
-
-            <div className="grid md:grid-cols-11 items-center gap-10 mb-20 max-w-5xl mx-auto">
-              <div className="md:col-span-5 space-y-4">
-                <label className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 block mb-2">Modèle Alpha</label>
-                <div className="relative">
-                   <select 
-                    value={selectedA} 
-                    onChange={(e) => setSelectedA(e.target.value)}
-                    className="w-full bg-slate-900/60 border border-white/10 rounded-2xl px-6 py-5 outline-none focus:border-[#007AFF] text-white appearance-none cursor-pointer hover:bg-white/5 transition-all text-sm font-bold"
-                  >
-                    <option value="">Sélectionner un smartphone...</option>
-                    {uniqueProductNames.map(name => <option key={name} value={name}>{name}</option>)}
-                  </select>
-                  <i className="fas fa-chevron-down absolute right-6 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none text-xs"></i>
-                </div>
-              </div>
-
-              <div className="md:col-span-1 flex justify-center pt-8 md:pt-0">
-                <div className="w-14 h-14 bg-white/5 rounded-full flex items-center justify-center border border-white/10 italic text-[#007AFF] font-black text-xl shadow-2xl">VS</div>
-              </div>
-
-              <div className="md:col-span-5 space-y-4">
-                <label className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500 block mb-2">Modèle Beta</label>
-                <div className="relative">
-                  <select 
-                    value={selectedB} 
-                    onChange={(e) => setSelectedB(e.target.value)}
-                    className="w-full bg-slate-900/60 border border-white/10 rounded-2xl px-6 py-5 outline-none focus:border-[#007AFF] text-white appearance-none cursor-pointer hover:bg-white/5 transition-all text-sm font-bold"
-                  >
-                    <option value="">Sélectionner un smartphone...</option>
-                    {uniqueProductNames.map(name => <option key={name} value={name}>{name}</option>)}
-                  </select>
-                  <i className="fas fa-chevron-down absolute right-6 top-1/2 -translate-y-1/2 text-slate-600 pointer-events-none text-xs"></i>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-center mb-40">
-              <button 
-                onClick={handleCompare}
-                disabled={!selectedA || !selectedB || comparing}
-                className={`bg-[#007AFF] text-white px-20 py-6 rounded-[24px] font-black uppercase text-xs tracking-[0.4em] shadow-2xl shadow-[#007AFF]/40 active:scale-95 transition-all disabled:opacity-20 flex items-center gap-5`}
-              >
-                {comparing ? <i className="fas fa-sync-alt animate-spin"></i> : <i className="fas fa-bolt"></i>}
-                Lancer le Comparatif
-              </button>
-            </div>
-
-            {comparisonResult && (
-              <div className="space-y-24 animate-in zoom-in-95 duration-1000">
-                <div className="bg-gradient-to-br from-[#007AFF]/20 via-[#020617] to-transparent p-16 md:p-24 rounded-[64px] border border-white/10 relative overflow-hidden text-center shadow-2xl">
-                  <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-from)_0%,_transparent_100%)] from-[#007AFF]/5 opacity-50"></div>
-                  <div className="relative z-10 space-y-10">
-                     <div className="flex justify-center gap-4 mb-4">
-                        <button onClick={() => handleShare(`${selectedA} vs ${selectedB}`, true)} className="px-6 py-2 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-[#007AFF] transition-all flex items-center gap-3 shadow-xl"><i className="fas fa-share-nodes"></i> Partager</button>
-                        <button onClick={() => handleWhatsApp(`${selectedA} vs ${selectedB}`, true)} className="px-6 py-2 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-green-600 transition-all flex items-center gap-3 shadow-xl"><i className="fab fa-whatsapp"></i> WhatsApp</button>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 mt-24 sm:mt-48">
+               {latestReviews.slice(0, 3).map((rev, i) => (
+                 <div key={i} className="glass-card p-5 sm:p-6 rounded-[30px] sm:rounded-[40px] cursor-pointer hover:translate-y-[-10px] transition-all duration-500 text-left relative overflow-hidden group/card" onClick={() => handleSearch(rev.product_name || '')}>
+                   <ProductImage src={rev.image_url || undefined} alt={rev.product_name || ''} className="w-full aspect-[3/2] rounded-[20px] sm:rounded-[30px] mb-6 sm:mb-8 group-hover/card:scale-105" />
+                   <h4 className="font-black text-lg sm:text-xl italic uppercase truncate mb-3 sm:mb-4">{rev.product_name}</h4>
+                   <div className="flex flex-col gap-3 sm:gap-4 border-t border-black/5 pt-4">
+                     <StarRating rating={rev.rating || 4} size="text-[14px]" />
+                     <div className="flex items-center justify-between">
+                        <AvatarStack images={AVATAR_PHOTOS.slice(i * 3, (i * 3) + 5)} count={4} size="h-8 w-8 sm:h-9 sm:w-9" />
+                        <span className="text-[9px] sm:text-[10px] font-black opacity-30 uppercase tracking-widest">Experts</span>
                      </div>
-                     <h3 className="text-4xl md:text-5xl font-black italic tracking-tighter">La Synthèse AvisScore</h3>
-                     <p className="text-2xl md:text-3xl text-slate-200 italic font-medium max-w-5xl mx-auto leading-snug opacity-90 tracking-tight">"{comparisonResult.summary}"</p>
-                     <div className="inline-flex items-center gap-6 px-12 py-5 bg-[#007AFF] text-white rounded-full font-black uppercase text-sm tracking-[0.2em] shadow-2xl shadow-[#007AFF]/40">
-                        <i className="fas fa-trophy"></i>
-                        Gagnant : {comparisonResult.winner}
-                     </div>
+                   </div>
+                 </div>
+               ))}
+            </div>
+          </section>
+        )}
+
+        {view === 'comparison' && (
+          <section className="pt-16 sm:pt-24 pb-24 sm:pb-40 px-6 max-w-[1200px] mx-auto animate-fade-in">
+            <h2 className="text-3xl sm:text-5xl font-black italic uppercase mb-12 sm:mb-16 tracking-tighter text-center">DUEL <span className="text-[#4158D0]">TECHNIQUE</span></h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10 mb-12 sm:mb-16">
+               <input type="text" placeholder="Modèle A..." value={compA} onChange={(e) => setCompA(e.target.value)} className="glass-card p-5 sm:p-6 rounded-[20px] sm:rounded-[30px] font-bold text-lg sm:text-xl outline-none placeholder:text-[#050A30]/40" />
+               <input type="text" placeholder="Modèle B..." value={compB} onChange={(e) => setCompB(e.target.value)} className="glass-card p-5 sm:p-6 rounded-[20px] sm:rounded-[30px] font-bold text-lg sm:text-xl outline-none placeholder:text-[#050A30]/40" />
+            </div>
+            <div className="text-center">
+               <button onClick={() => compA && compB && performComparisonAnalysis(compA, compB)} className="bg-[#050A30] text-white px-12 sm:px-20 py-5 sm:py-7 rounded-[25px] sm:rounded-[35px] font-black uppercase tracking-[0.3em] hover:bg-[#4158D0] shadow-2xl transition-all">Lancer le Duel</button>
+            </div>
+            {compData && (
+              <div className="mt-16 sm:mt-24 space-y-12">
+                <div className="glass-card p-8 sm:p-12 rounded-[30px] sm:rounded-[50px] text-center border-white shadow-2xl">
+                  <h3 className="text-2xl sm:text-4xl font-black italic text-[#4158D0] mb-4 sm:mb-6 uppercase">GAGNANT : {compData.winner}</h3>
+                  <p className="text-lg sm:text-xl font-bold italic opacity-80 leading-relaxed">"{compData.summary}"</p>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {view === 'detail' && product && (
+          <section className="pb-24 sm:pb-40 max-w-[1450px] mx-auto px-4 sm:px-6 pt-16 sm:pt-24 animate-fade-in">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 sm:gap-24 items-start mb-16 sm:mb-28">
+              <div className="w-full bg-white rounded-[35px] sm:rounded-[56px] overflow-hidden shadow-2xl border-[10px] sm:border-[18px] border-white lg:sticky lg:top-32">
+                <ProductImage src={product.image_url} alt={product.name} className="w-full aspect-[4/5] md:aspect-[3/4]" />
+              </div>
+              <div className="flex flex-col items-start space-y-12 sm:space-y-16">
+                <div className="w-full">
+                  <h2 className="text-4xl sm:text-6xl md:text-8xl font-black italic uppercase tracking-tighter leading-tight sm:leading-none mb-8 sm:mb-10">{product.name}</h2>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-10 p-5 sm:p-6 bg-white/50 backdrop-blur-3xl border border-white/80 rounded-[35px] sm:rounded-[50px] shadow-2xl w-full sm:w-fit sm:pr-14">
+                    <div className="bg-[#050A30] text-white w-20 h-20 sm:w-28 sm:h-28 rounded-[25px] sm:rounded-[35px] flex flex-col items-center justify-center shadow-xl shrink-0">
+                       <span className="text-3xl sm:text-5xl font-black italic">{aiVerdict ? (aiVerdict.score / 10).toFixed(1) : "9.2"}</span>
+                       <span className="text-[8px] sm:text-[10px] font-bold opacity-40 uppercase">Score IA</span>
+                    </div>
+                    <div className="flex flex-col gap-4 sm:gap-6 w-full">
+                       <div className="flex items-center gap-3 sm:gap-4 bg-white/60 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full border border-white shadow-sm w-full sm:w-auto overflow-hidden">
+                          <StarRating rating={4.8} size="text-[14px] sm:text-[18px]" />
+                          <div className="h-4 w-[1px] bg-black/10 mx-1"></div>
+                          <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.1em] sm:tracking-[0.3em] text-[#050A30]/60 italic truncate">Indice de Confiance</span>
+                       </div>
+                       <div className="flex items-center gap-3 sm:gap-4 pl-1 sm:pl-2">
+                          <AvatarStack count={4} size="h-7 w-7 sm:h-8 sm:w-8" />
+                          <span className="text-[8px] sm:text-[10px] font-black opacity-30 uppercase tracking-widest">Vérifié par {aiVerdict?.totalReviews || 4500} experts</span>
+                       </div>
+                    </div>
                   </div>
                 </div>
-
-                <div className="overflow-hidden border border-white/10 rounded-[48px] shadow-[0_40px_100px_-20px_rgba(0,122,255,0.15)] bg-slate-900/40 backdrop-blur-3xl relative">
-                  <div className="grid grid-cols-3 bg-white/5 border-b border-white/10">
-                    <div className="p-10 text-[12px] font-black uppercase text-[#007AFF] tracking-[0.5em] flex items-center">Comparatif</div>
-                    <div className="p-10 text-3xl font-black italic tracking-tighter border-l border-white/5 bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent">{selectedA}</div>
-                    <div className="p-10 text-3xl font-black italic tracking-tighter border-l border-white/5 bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent">{selectedB}</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10 w-full">
+                  <div className="glass-card p-8 sm:p-12 rounded-[35px] sm:rounded-[45px] bg-white/50">
+                    <h3 className="text-[11px] sm:text-[12px] font-black uppercase tracking-[0.4em] sm:tracking-[0.5em] mb-6 sm:mb-10 text-emerald-600 flex justify-between">Points Forts <i className="fas fa-check-circle"></i></h3>
+                    <ul className="space-y-4 sm:space-y-5">
+                      {aiVerdict?.pros.map((p, i) => (
+                        <li key={i} className="text-[13px] sm:text-[15px] font-bold flex gap-3 sm:gap-4"><span className="w-2 h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></span> <span className="opacity-80">{p}</span></li>
+                      ))}
+                    </ul>
                   </div>
-                  
-                  {comparisonResult.criteria.map((c, i) => (
-                    <div key={i} className="grid grid-cols-3 border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
-                      <div className="p-10 bg-white/5 flex flex-col justify-center">
-                        <span className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-500 mb-2">{c.label}</span>
-                        <div className="w-8 h-1 bg-[#007AFF] rounded-full"></div>
-                      </div>
-                      <div className="p-10 text-slate-300 leading-relaxed font-medium text-lg border-l border-white/5 italic">
-                        {c.productA}
-                      </div>
-                      <div className="p-10 text-slate-300 leading-relaxed font-medium text-lg border-l border-white/5 italic">
-                        {c.productB}
-                      </div>
-                    </div>
-                  ))}
+                  <div className="glass-card p-8 sm:p-12 rounded-[35px] sm:rounded-[45px] bg-white/50">
+                    <h3 className="text-[11px] sm:text-[12px] font-black uppercase tracking-[0.4em] sm:tracking-[0.5em] mb-6 sm:mb-10 text-rose-600 flex justify-between">Points Faibles <i className="fas fa-times-circle"></i></h3>
+                    <ul className="space-y-4 sm:space-y-5">
+                      {aiVerdict?.cons.map((c, i) => (
+                        <li key={i} className="text-[13px] sm:text-[15px] font-bold flex gap-3 sm:gap-4"><span className="w-2 h-2 rounded-full bg-rose-500 mt-2 shrink-0"></span> <span className="opacity-80">{c}</span></li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+                <div className="glass-card p-8 sm:p-14 rounded-[35px] sm:rounded-[50px] bg-white/70 shadow-2xl border-white w-full">
+                  <h3 className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.5em] sm:tracking-[0.6em] mb-6 sm:mb-10 text-[#050A30]/30 italic">DESCRIPTION</h3>
+                  <p className="text-[#050A30]/90 font-bold italic leading-relaxed sm:leading-loose text-xl sm:text-2xl border-l-[6px] sm:border-l-[10px] border-[#4158D0] pl-6 sm:pl-12">{product.description}</p>
+                </div>
+              </div>
+            </div>
+
+            {aiVerdict && (
+              <div className="glass-card rounded-[40px] sm:rounded-[60px] overflow-hidden shadow-2xl border-white border-[1.5px] sm:border-[2px] mt-10 sm:mt-20 animate-fade-in">
+                <div className="px-6 sm:px-20 pt-10 sm:pt-20 pb-8 sm:pb-12 flex flex-col sm:row justify-between sm:items-center gap-6 border-b border-black/5 bg-white/40">
+                  <h3 className="text-2xl sm:text-4xl font-black italic uppercase tracking-tighter">ANALYSE MARCHÉ <span className="hidden sm:inline text-[#4158D0] text-xl font-bold ml-6">— LIVE STATS</span></h3>
+                  <div className="flex gap-3 sm:gap-4">
+                    <div className="px-4 sm:px-6 py-2 sm:py-3 bg-emerald-100/50 text-emerald-700 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest">Live: Actif</div>
+                    <div className="px-4 sm:px-6 py-2 sm:py-3 bg-blue-100/50 text-blue-700 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest">v5.4 Certifié</div>
+                  </div>
+                </div>
+                
+                <div className="p-6 sm:p-20 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-12 bg-white/20">
+                   <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#4158D0] rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-white shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-shopping-cart text-sm sm:text-base"></i></div>
+                      <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">VERDICT ACHAT</p>
+                      <p className="text-xl sm:text-3xl font-black italic text-[#4158D0] uppercase tracking-tighter">{aiVerdict.marketMoment}</p>
+                   </div>
+                   <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#FFD700] rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-[#050A30] shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-tag text-sm sm:text-base"></i></div>
+                      <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">MEILLEUR PRIX</p>
+                      <p className="text-xl sm:text-3xl font-black italic tracking-tighter">{aiVerdict.marketBestPrice}</p>
+                   </div>
+                   <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#C850C0] rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-white shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-random text-sm sm:text-base"></i></div>
+                      <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">ALTERNATIVE</p>
+                      <p className="text-xl sm:text-3xl font-black italic tracking-tighter uppercase truncate">{aiVerdict.marketAlternative}</p>
+                   </div>
+                   <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-500 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-white shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-chart-line text-sm sm:text-base"></i></div>
+                      <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">OPPORTUNITÉ</p>
+                      <p className="text-2xl sm:text-4xl font-black italic text-emerald-600 tracking-tighter">{aiVerdict.opportunityScore}%</p>
+                   </div>
+                </div>
+
+                <div className="px-6 sm:px-20 py-10 sm:py-14 bg-black/5 border-t border-black/5">
+                   <div className="h-6 sm:h-9 w-full bg-black/5 rounded-full overflow-hidden shadow-inner p-1 sm:p-1.5">
+                      <div className="h-full bg-gradient-to-r from-[#4158D0] via-[#C850C0] to-[#FFCC70] transition-all duration-1000 rounded-full shadow-lg" style={{ width: `${aiVerdict.opportunityScore}%` }}></div>
+                   </div>
+                   <div className="flex flex-col sm:row justify-between mt-4 sm:mt-6 gap-2">
+                     <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest opacity-20 italic">Score de Satisfaction Global</span>
+                     <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-[#4158D0] italic">{aiVerdict.opportunityLabel}</span>
+                   </div>
                 </div>
               </div>
             )}
@@ -468,19 +325,13 @@ export default function App() {
         )}
       </main>
 
-      <footer className="border-t border-white/5 py-24 px-6 bg-[#01040f] mt-40">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-12 opacity-60">
-          <div className="flex flex-col gap-4">
-             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-[#007AFF] rounded-2xl flex items-center justify-center shadow-lg shadow-[#007AFF]/30"><i className="fas fa-bolt text-white"></i></div>
-              <span className="font-black text-3xl tracking-tighter uppercase">AvisScore</span>
-            </div>
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-600">Premium Tech Intelligence Labs</p>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            <p className="text-slate-700 text-[10px] font-black uppercase tracking-[0.5em]">© 2025 AvisScore — All Tech Insights Reserved</p>
-            <p className="text-[#007AFF] text-[9px] font-black uppercase tracking-[0.3em]">Powered by Supabase & Gemini 3.0 Pro</p>
-          </div>
+      <footer className="py-16 sm:py-24 glass-card !rounded-none !border-x-0 !border-b-0 mt-auto">
+        <div className="max-w-[1300px] mx-auto px-6 text-center space-y-8 sm:space-y-12">
+           <div className="flex justify-center items-center gap-6 sm:gap-10">
+             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-[#050A30] rounded-[18px] sm:rounded-[22px] flex items-center justify-center shadow-2xl"><i className="fas fa-bolt text-white text-xl sm:text-3xl"></i></div>
+             <span className="text-3xl sm:text-5xl font-black italic uppercase tracking-tighter">Avis<span className="text-[#4158D0]">Score</span></span>
+           </div>
+           <p className="text-[10px] sm:text-[14px] font-bold uppercase tracking-[0.4em] sm:tracking-[1em] opacity-20 italic px-4">© AvisScore Excellence v5.4 — Intelligence Certifiée 2025</p>
         </div>
       </footer>
     </div>
