@@ -99,7 +99,11 @@ export default function App() {
   const performAIAnalysis = async (productName: string) => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = `Analyse: ${productName}. Constraints: Language=FRENCH ONLY. Map: Tech->(Img:eBay, Desc:Fnac); Home->(Img:LeroyMerlin, Desc:ManoMano); Cars->(Img:NetCarShow, Desc:Official); Others->(Img:Rakuten). Output: JSON only {score, image_url, description, pros:[exact 5 items in french], cons:[exact 5 items in french], verdict, marketMoment, marketBestPrice, marketAlternative, opportunityScore, opportunityLabel}.`;
+      const prompt = `Analyse le produit: "${productName}". 
+      Constraints: 
+      - Language: FRENCH ONLY. 
+      - Format: JSON STRICT.
+      - Schema: {score (0-100), image_url, description, pros (5 items), cons (5 items), verdict, marketMoment, marketBestPrice, marketAlternative, opportunityScore, opportunityLabel}.`;
 
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
@@ -109,7 +113,13 @@ export default function App() {
           thinkingConfig: { thinkingBudget: 0 }
         }
       });
-      return JSON.parse(response.text);
+      
+      const text = response.text;
+      if (!text) throw new Error("Empty AI response");
+      
+      // Nettoyage au cas où le modèle renverrait du Markdown
+      const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
+      return JSON.parse(cleaned);
     } catch (e) { 
       console.error("AI Analysis Error:", e);
       return null; 
@@ -121,7 +131,7 @@ export default function App() {
     setShowLoadingOverlay(true);
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = `Duel: "${nameA}" vs "${nameB}". Constraints: Language=FRENCH ONLY. JSON only {summary, winner, criteria:[{label, productA, productB, better:A/B/Equal}]}.`;
+      const prompt = `Duel technique: "${nameA}" vs "${nameB}". Format JSON: {summary, winner, criteria:[{label, productA, productB, better:A/B/Equal}]}. Langue: Français.`;
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: prompt,
@@ -130,7 +140,8 @@ export default function App() {
           thinkingConfig: { thinkingBudget: 0 }
         }
       });
-      setCompData(JSON.parse(response.text));
+      const cleaned = response.text.replace(/```json/g, '').replace(/```/g, '').trim();
+      setCompData(JSON.parse(cleaned));
     } catch (err) {
       console.error("Comparison Error:", err);
     } finally { 
@@ -145,42 +156,43 @@ export default function App() {
     }
     if (!productName) return;
     
-    // 1. Démarrer l'overlay et changer de vue IMMÉDIATEMENT pour "bloquer" la navigation
+    // 1. Déclenchement visuel immédiat
+    setView('detail');
     setShowLoadingOverlay(true);
-    
-    // On réinitialise les données pour le nouveau produit
-    const tempProduct: Product = {
+    setAiVerdict(null);
+    setProduct({
       id: 'gen-' + Date.now(),
       name: productName,
       image_url: existingImage,
-      description: "Analyse des données en temps réel...",
+      description: "Analyse des données en cours via intelligence artificielle...",
       price: 0,
       category: "Analyse"
-    };
-    
-    setProduct(tempProduct);
-    setAiVerdict(null);
-    setView('detail');
+    });
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     try {
-      // 2. Lancer l'analyse AI
+      // 2. Appel asynchrone sécurisé
       const analysis = await performAIAnalysis(productName);
       
       if (analysis) {
-        // 3. Mettre à jour les données une fois reçues
-        setProduct({
-          ...tempProduct,
+        setProduct(prev => prev ? {
+          ...prev,
           image_url: existingImage || analysis.image_url,
           description: analysis.description,
-        });
+        } : null);
         setAiVerdict({ ...analysis, totalReviews: 4500 });
+      } else {
+        // Fallback en cas d'erreur de l'IA
+        setProduct(prev => prev ? { 
+          ...prev, 
+          description: "Désolé, l'analyse détaillée n'est pas disponible pour le moment. Veuillez vérifier le nom du produit." 
+        } : null);
       }
     } catch (err) {
-      console.error("Search Error:", err);
+      console.error("Search Handler Error:", err);
     } finally {
-      // 4. Cacher l'overlay
-      setTimeout(() => setShowLoadingOverlay(false), 300);
+      // 3. Quoi qu'il arrive, on retire l'overlay de chargement
+      setTimeout(() => setShowLoadingOverlay(false), 400);
     }
   };
 
@@ -264,7 +276,6 @@ export default function App() {
           </section>
         )}
 
-        {/* Note: Updated conditional logic to ensure view displays during loading */}
         {view === 'detail' && product && (
           <section className="pb-24 sm:pb-40 max-w-[1450px] mx-auto px-4 sm:px-6 pt-16 sm:pt-24 animate-fade-in">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 sm:gap-24 items-start mb-16 sm:mb-28">
