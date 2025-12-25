@@ -29,20 +29,26 @@ export interface Product {
 }
 
 export interface AIAnalysis {
-  verdict: string;
-  punchyVerdict: string;
+  description: string;
+  verdict?: string;
+  punchyVerdict?: string;
   pros: string[];
   cons: string[];
   score: number;
-  sourceScores: { site: string; score: number }[];
-  totalReviews: number;
-  buyingWindow: string;
-  buyingConfidence: number;
-  marketMoment: string;
+  sourceScores?: { site: string; score: number }[];
+  totalReviews?: number;
+  buyingWindow?: string;
+  buyingConfidence?: number;
+  marketMoment?: string;
   marketBestPrice: string;
-  marketAlternative: string;
-  opportunityScore: number;
-  opportunityLabel: string;
+  marketAlternatives: string[]; // Liste de 4 alternatives réelles avec prix
+  durabilityScore?: number;
+  trustStatement: string;
+  oneWordVerdict: string;
+  buyerTip: string;
+  predecessorName: string;
+  activeLifespanYears: number;
+  groundingSources?: { title: string; uri: string }[];
 }
 
 export interface ComparisonData {
