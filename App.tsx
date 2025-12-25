@@ -1,13 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import { GoogleGenAI, Type } from "@google/genai";
 import { supabase } from './lib/supabaseClient';
-import { fetchLatestReviews, fetchUniqueProducts } from './services/reviewService';
+import { fetchLatestReviews, fetchUniqueProducts, fetchProductDataFromReviews } from './services/reviewService';
 import { Product, Review, AIAnalysis, ComparisonData } from './types';
 
 const deepNavy = '#050A30';
 
-// Diagnostic log to confirm update is live
-console.log("%c AvisScore V6.0 - ACTIVE", "color: #4158D0; font-weight: bold; font-size: 16px;");
+// Production Flag
+console.log("%c AvisScore Production Mode - ACTIVE", "color: #22c55e; font-weight: bold; font-size: 16px;");
 
 const AVATAR_PHOTOS = [
   "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&h=120&fit=crop",
@@ -99,24 +100,21 @@ export default function App() {
     }
   };
 
-  const performAIAnalysis = async (productName: string, isRetry = false): Promise<any> => {
+  const performAIAnalysis = async (productName: string, reviewsText: string): Promise<any> => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = isRetry 
-        ? `Donne-moi une analyse TRÈS SIMPLE en JSON pour le produit "${productName}".`
-        : `Analyse technique complète pour le produit "${productName}". Langue: Français.`;
+      const prompt = `Analyse ce produit: "${productName}". Voici les avis des utilisateurs: "${reviewsText.substring(0, 1000)}".`;
 
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: prompt,
         config: { 
-          systemInstruction: "Tu es un expert tech. Réponds EXCLUSIVEMENT en JSON. Ne dis rien d'autre. Si tu ne connais pas le produit, estime ses caractéristiques selon le marché actuel.",
+          systemInstruction: "Tu es un expert tech de haut niveau. Réponds EXCLUSIVEMENT en JSON valide. Ne dis rien d'autre. Pas de texte, pas de markdown.",
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,
             properties: {
               score: { type: Type.NUMBER },
-              image_url: { type: Type.STRING },
               description: { type: Type.STRING },
               pros: { type: Type.ARRAY, items: { type: Type.STRING } },
               cons: { type: Type.ARRAY, items: { type: Type.STRING } },
@@ -131,94 +129,73 @@ export default function App() {
         }
       });
       
-      let rawText = response.text || "";
-      
-      // Advanced JSON Extraction Logic
-      try {
-        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          return JSON.parse(jsonMatch[0]);
-        }
-        return JSON.parse(rawText);
-      } catch (parseError) {
-        console.warn("Manual JSON parse failed, trying backup...");
-        // If it still fails but we have text, we can't do much but retry or return null
-        if (!isRetry) return performAIAnalysis(productName, true);
-        return null;
-      }
+      const text = response.text || "";
+      const cleanedText = text.replace(/```json/g, "").replace(/```/g, "").trim();
+      const match = cleanedText.match(/\{[\s\S]*\}/);
+      return JSON.parse(match ? match[0] : cleanedText);
     } catch (e) { 
-      console.error("API Error:", e);
-      if (!isRetry) return performAIAnalysis(productName, true);
-      return null; 
-    }
-  };
-
-  const performComparisonAnalysis = async (nameA: string, nameB: string) => {
-    if (!nameA || !nameB) return;
-    setShowLoadingOverlay(true);
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `Compare "${nameA}" et "${nameB}". JSON uniquement.`,
-        config: { responseMimeType: "application/json" }
-      });
-      const text = response.text;
-      if (text) {
-        const match = text.match(/\{[\s\S]*\}/);
-        setCompData(JSON.parse(match ? match[0] : text));
-      }
-    } catch (err) {
-      console.error("Comparison Error:", err);
-    } finally { 
-      setShowLoadingOverlay(false); 
+      console.error("AI Generation failed:", e);
+      return null;
     }
   };
 
   const handleSearch = async (productName: string, existingImage?: string, e?: React.FormEvent | React.MouseEvent) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+    if (e) { e.preventDefault(); e.stopPropagation(); }
     if (!productName) return;
     
     setView('detail');
     setShowLoadingOverlay(true);
     setAiVerdict(null);
-    setProduct({
-      id: 'gen-' + Date.now(),
-      name: productName,
-      image_url: existingImage,
-      description: "Synchronisation avec l'intelligence artificielle en cours...",
-      price: 0,
-      category: "Expertise"
-    });
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     try {
-      const analysis = await performAIAnalysis(productName);
+      // 1. Fetch from 'my_reviews' table in Supabase
+      const { reviews, firstMatch } = await fetchProductDataFromReviews(productName);
+      
+      // Calculate real average rating from Supabase data
+      const avgRating = reviews.length > 0 
+        ? reviews.reduce((acc, curr) => acc + (curr.rating || 0), 0) / reviews.length 
+        : 4.5;
+
+      const supabaseImage = existingImage || firstMatch?.image_url;
+      const allReviewsText = reviews.map(r => r.review_text).join(" | ");
+
+      // 2. Set UI data immediately from Supabase
+      setProduct({
+        id: 'db-' + (firstMatch?.id || Date.now()),
+        name: firstMatch?.product_name || productName,
+        image_url: supabaseImage,
+        description: "Analyse des avis clients en cours...",
+        price: 0,
+        category: "High-Tech",
+        reviews: reviews
+      });
+
+      // 3. Remove Loading Overlay as soon as basic data is ready
+      setShowLoadingOverlay(false);
+
+      // 4. Trigger AI for advanced analysis
+      const analysis = await performAIAnalysis(productName, allReviewsText);
       if (analysis) {
         setProduct(prev => prev ? {
           ...prev,
-          image_url: existingImage || analysis.image_url || prev.image_url,
           description: analysis.description || prev.description,
         } : null);
         setAiVerdict({ 
           ...analysis, 
-          totalReviews: 4500,
-          opportunityScore: analysis.opportunityScore || 85,
-          opportunityLabel: analysis.opportunityLabel || "Score de satisfaction élevé"
+          totalReviews: reviews.length || 4500,
+          opportunityScore: analysis.opportunityScore || (avgRating * 20),
+          opportunityLabel: analysis.opportunityLabel || "Basé sur les avis clients"
         });
       } else {
         setProduct(prev => prev ? { 
           ...prev, 
-          description: "Analyse en direct instable pour ce modèle. Veuillez réessayer avec un nom plus précis ou vérifier votre connexion." 
+          description: "Analyse disponible via les avis clients ci-dessous." 
         } : null);
       }
     } catch (err) {
-      console.error("Critical Failure:", err);
-    } finally {
-      setTimeout(() => setShowLoadingOverlay(false), 500);
+      console.error("Search Error:", err);
+      setShowLoadingOverlay(false);
     }
   };
 
@@ -244,15 +221,12 @@ export default function App() {
           <button className="text-[11px] font-black uppercase tracking-[0.3em] text-[#050A30]/50 hover:text-[#4158D0] transition-colors">FAQ</button>
           <button className="text-[11px] font-black uppercase tracking-[0.3em] text-[#050A30]/50 hover:text-[#4158D0] transition-colors">Contact</button>
         </div>
-        <div className="lg:hidden">
-          <button onClick={() => setView('comparison')} className="w-9 h-9 flex items-center justify-center rounded-full bg-[#4158D0]/10 text-[#4158D0]"><i className="fas fa-exchange-alt"></i></button>
-        </div>
       </nav>
 
       <main className="flex-grow">
         {view === 'home' && (
           <section className="pt-20 sm:pt-32 pb-24 sm:pb-40 px-6 max-w-[1400px] mx-auto text-center">
-            <div className="inline-block px-6 sm:px-8 py-2 sm:py-2.5 bg-white/30 rounded-full border border-white/50 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.5em] mb-8 sm:mb-12 shadow-sm italic">Intelligence Artificielle Certifiée v6.0</div>
+            <div className="inline-block px-6 sm:px-8 py-2 sm:py-2.5 bg-white/30 rounded-full border border-white/50 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.5em] mb-8 sm:mb-12 shadow-sm italic">Production Intelligence v6.1</div>
             <h2 className="text-4xl sm:text-6xl md:text-8xl font-black italic uppercase mb-10 sm:mb-14 tracking-tighter leading-tight">Décodez la vérité <br/><span className="text-[#4158D0]">en un clic.</span></h2>
             
             <form onSubmit={(e) => handleSearch(query, undefined, e)} className="max-w-2xl mx-auto flex flex-col sm:flex-row gap-4 bg-white/40 p-2 sm:p-3 rounded-[30px] sm:rounded-[40px] shadow-2xl backdrop-blur-md border border-white/60 group">
@@ -281,27 +255,6 @@ export default function App() {
           </section>
         )}
 
-        {view === 'comparison' && (
-          <section className="pt-16 sm:pt-24 pb-24 sm:pb-40 px-6 max-w-[1200px] mx-auto animate-fade-in">
-            <h2 className="text-3xl sm:text-5xl font-black italic uppercase mb-12 sm:mb-16 tracking-tighter text-center">DUEL <span className="text-[#4158D0]">TECHNIQUE</span></h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10 mb-12 sm:mb-16">
-               <input type="text" placeholder="Modèle A..." value={compA} onChange={(e) => setCompA(e.target.value)} className="glass-card p-5 sm:p-6 rounded-[20px] sm:rounded-[30px] font-bold text-lg sm:text-xl outline-none placeholder:text-[#050A30]/40" />
-               <input type="text" placeholder="Modèle B..." value={compB} onChange={(e) => setCompB(e.target.value)} className="glass-card p-5 sm:p-6 rounded-[20px] sm:rounded-[30px] font-bold text-lg sm:text-xl outline-none placeholder:text-[#050A30]/40" />
-            </div>
-            <div className="text-center">
-               <button onClick={() => performComparisonAnalysis(compA, compB)} className="bg-[#050A30] text-white px-12 sm:px-20 py-5 sm:py-7 rounded-[25px] sm:rounded-[35px] font-black uppercase tracking-[0.3em] hover:bg-[#4158D0] shadow-2xl transition-all">Lancer le Duel</button>
-            </div>
-            {compData && (
-              <div className="mt-16 sm:mt-24 space-y-12">
-                <div className="glass-card p-8 sm:p-12 rounded-[30px] sm:rounded-[50px] text-center border-white shadow-2xl">
-                  <h3 className="text-2xl sm:text-4xl font-black italic text-[#4158D0] mb-4 sm:mb-6 uppercase">GAGNANT : {compData.winner}</h3>
-                  <p className="text-lg sm:text-xl font-bold italic opacity-80 leading-relaxed">"{compData.summary}"</p>
-                </div>
-              </div>
-            )}
-          </section>
-        )}
-
         {view === 'detail' && product && (
           <section className="pb-24 sm:pb-40 max-w-[1450px] mx-auto px-4 sm:px-6 pt-16 sm:pt-24 animate-fade-in">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 sm:gap-24 items-start mb-16 sm:mb-28">
@@ -313,7 +266,7 @@ export default function App() {
                   <h2 className="text-3xl sm:text-5xl md:text-6xl font-black italic uppercase tracking-tighter leading-tight sm:leading-none mb-6 sm:mb-8">{product.name}</h2>
                   <div className="flex flex-col sm:row items-start sm:items-center gap-6 sm:gap-10 p-5 sm:p-6 bg-white/50 backdrop-blur-3xl border border-white/80 rounded-[35px] sm:rounded-[50px] shadow-2xl w-full sm:w-fit sm:pr-14">
                     <div className="bg-[#050A30] text-white w-20 h-20 sm:w-28 sm:h-28 rounded-[25px] sm:rounded-[35px] flex flex-col items-center justify-center shadow-xl shrink-0">
-                       <span className="text-3xl sm:text-5xl font-black italic">{aiVerdict ? (aiVerdict.score / 10).toFixed(1) : "—"}</span>
+                       <span className="text-3xl sm:text-5xl font-black italic">{aiVerdict ? (aiVerdict.score / 10).toFixed(1) : (product.reviews && product.reviews.length > 0 ? (product.reviews.reduce((a,b)=>a+(b.rating||0),0)/product.reviews.length).toFixed(1) : "—")}</span>
                        <span className="text-[8px] sm:text-[10px] font-bold opacity-40 uppercase">Score IA</span>
                     </div>
                     <div className="flex flex-col gap-4 sm:gap-6 w-full">
@@ -324,7 +277,7 @@ export default function App() {
                        </div>
                        <div className="flex items-center gap-3 sm:gap-4 pl-1 sm:pl-2">
                           <AvatarStack count={4} size="h-7 w-7 sm:h-8 w-8" />
-                          <span className="text-[8px] sm:text-[10px] font-black opacity-30 uppercase tracking-widest">Vérifié par {aiVerdict ? aiVerdict.totalReviews : 4500} experts</span>
+                          <span className="text-[8px] sm:text-[10px] font-black opacity-30 uppercase tracking-widest">Vérifié par {aiVerdict ? aiVerdict.totalReviews : (product.reviews?.length || 4500)} experts</span>
                        </div>
                     </div>
                   </div>
@@ -370,7 +323,7 @@ export default function App() {
                   <h3 className="text-2xl sm:text-4xl font-black italic uppercase tracking-tighter">ANALYSE MARCHÉ <span className="hidden sm:inline text-[#4158D0] text-xl font-bold ml-6">— LIVE STATS</span></h3>
                   <div className="flex gap-3 sm:gap-4">
                     <div className="px-4 sm:px-6 py-2 sm:py-3 bg-emerald-100/50 text-emerald-700 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest">Live: Actif</div>
-                    <div className="px-4 sm:px-6 py-2 sm:py-3 bg-blue-100/50 text-blue-700 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest">v6.0 Certifié</div>
+                    <div className="px-4 sm:px-6 py-2 sm:py-3 bg-blue-100/50 text-blue-700 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest">v6.1 Certifié</div>
                   </div>
                 </div>
                 
@@ -378,12 +331,12 @@ export default function App() {
                    <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#4158D0] rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-white shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-shopping-cart text-sm sm:text-base"></i></div>
                       <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">VERDICT ACHAT</p>
-                      <p className="text-xl sm:text-3xl font-black italic text-[#4158D0] uppercase tracking-tighter">{aiVerdict?.marketMoment || 'Analyse...'}</p>
+                      <p className="text-xl sm:text-3xl font-black italic text-[#4158D0] uppercase tracking-tighter">{aiVerdict?.marketMoment || '...'}</p>
                    </div>
                    <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#FFD700] rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-[#050A30] shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-tag text-sm sm:text-base"></i></div>
                       <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">MEILLEUR PRIX</p>
-                      <p className="text-xl sm:text-3xl font-black italic tracking-tighter">{aiVerdict?.marketBestPrice || 'Analyse...'}</p>
+                      <p className="text-xl sm:text-3xl font-black italic tracking-tighter">{aiVerdict?.marketBestPrice || '...'}</p>
                    </div>
                    <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#C850C0] rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-white shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-random text-sm sm:text-base"></i></div>
@@ -403,7 +356,7 @@ export default function App() {
                    </div>
                    <div className="flex flex-col sm:row justify-between mt-4 sm:mt-6 gap-2">
                      <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest opacity-20 italic">Score de Satisfaction Global</span>
-                     <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-[#4158D0] italic">{aiVerdict?.opportunityLabel || 'Calcul...'}</span>
+                     <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-[#4158D0] italic">{aiVerdict?.opportunityLabel || 'Calcul en cours...'}</span>
                    </div>
                 </div>
               </div>
@@ -418,7 +371,7 @@ export default function App() {
              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-[#050A30] rounded-[18px] sm:rounded-[22px] flex items-center justify-center shadow-2xl"><i className="fas fa-bolt text-white text-xl sm:text-3xl"></i></div>
              <span className="text-3xl sm:text-5xl font-black italic uppercase tracking-tighter">Avis<span className="text-[#4158D0]">Score</span></span>
            </div>
-           <p className="text-[10px] sm:text-[14px] font-bold uppercase tracking-[0.4em] sm:tracking-[1em] opacity-20 italic px-4">© AvisScore Excellence v6.0 — Intelligence Certifiée 2025</p>
+           <p className="text-[10px] sm:text-[14px] font-bold uppercase tracking-[0.4em] sm:tracking-[1em] opacity-20 italic px-4">© AvisScore Excellence v6.1 — Intelligence Certifiée 2025</p>
         </div>
       </footer>
     </div>

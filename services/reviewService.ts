@@ -1,3 +1,4 @@
+
 import { supabase } from '../lib/supabaseClient';
 import { Review, Product } from '../types';
 
@@ -39,18 +40,21 @@ export const fetchUniqueProducts = async (): Promise<string[]> => {
 };
 
 /**
- * Fetches a product by its name to show details and generate AI analysis.
+ * Fetches product data and its reviews from 'my_reviews' table by product name.
  */
-export const fetchProductByName = async (name: string): Promise<Product | null> => {
+export const fetchProductDataFromReviews = async (name: string): Promise<{ reviews: Review[], firstMatch: Review | null }> => {
   const { data, error } = await supabase
-    .from('products')
+    .from('my_reviews')
     .select('*')
-    .ilike('name', `%${name}%`)
-    .maybeSingle();
+    .ilike('product_name', `%${name}%`);
 
   if (error) {
-    console.error("Supabase Error (fetchProductByName):", error);
-    return null;
+    console.error("Supabase Error (fetchProductDataFromReviews):", error);
+    return { reviews: [], firstMatch: null };
   }
-  return data;
+  
+  return { 
+    reviews: data || [], 
+    firstMatch: data && data.length > 0 ? data[0] : null 
+  };
 };
