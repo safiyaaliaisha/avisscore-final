@@ -6,6 +6,9 @@ import { Product, Review, AIAnalysis, ComparisonData } from './types';
 
 const deepNavy = '#050A30';
 
+// Diagnostic log to confirm update is live
+console.log("%c AvisScore V6.0 - ACTIVE", "color: #4158D0; font-weight: bold; font-size: 16px;");
+
 const AVATAR_PHOTOS = [
   "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&h=120&fit=crop",
   "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&h=120&fit=crop",
@@ -96,15 +99,18 @@ export default function App() {
     }
   };
 
-  const performAIAnalysis = async (productName: string) => {
+  const performAIAnalysis = async (productName: string, isRetry = false): Promise<any> => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      // Using a very clear system instruction and a flexible response schema to prevent AI blocking/failure
+      const prompt = isRetry 
+        ? `Donne-moi une analyse TRÈS SIMPLE en JSON pour le produit "${productName}".`
+        : `Analyse technique complète pour le produit "${productName}". Langue: Français.`;
+
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: `Fourni une analyse technique en Français pour le produit: "${productName}".`,
+        contents: prompt,
         config: { 
-          systemInstruction: "Tu es un expert en test de produits technologiques. Réponds exclusivement au format JSON sans aucun texte explicatif. Si une donnée est inconnue, invente une estimation réaliste basée sur le marché actuel.",
+          systemInstruction: "Tu es un expert tech. Réponds EXCLUSIVEMENT en JSON. Ne dis rien d'autre. Si tu ne connais pas le produit, estime ses caractéristiques selon le marché actuel.",
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,
@@ -120,26 +126,29 @@ export default function App() {
               opportunityScore: { type: Type.NUMBER },
               opportunityLabel: { type: Type.STRING }
             },
-            required: ["score", "description", "pros", "cons"]
+            required: ["score", "description", "pros", "cons", "marketMoment", "marketBestPrice", "marketAlternative", "opportunityScore", "opportunityLabel"]
           }
         }
       });
       
-      let text = response.text;
-      if (!text) return null;
+      let rawText = response.text || "";
       
-      // Multi-layer cleaning to handle all types of model output weirdness
-      text = text.trim();
-      if (text.startsWith("```")) {
-        text = text.replace(/^```json/, "").replace(/```$/, "").trim();
+      // Advanced JSON Extraction Logic
+      try {
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0]);
+        }
+        return JSON.parse(rawText);
+      } catch (parseError) {
+        console.warn("Manual JSON parse failed, trying backup...");
+        // If it still fails but we have text, we can't do much but retry or return null
+        if (!isRetry) return performAIAnalysis(productName, true);
+        return null;
       }
-      
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      const finalJsonStr = jsonMatch ? jsonMatch[0] : text;
-      
-      return JSON.parse(finalJsonStr);
     } catch (e) { 
-      console.error("AI Analysis critical failure:", e);
+      console.error("API Error:", e);
+      if (!isRetry) return performAIAnalysis(productName, true);
       return null; 
     }
   };
@@ -151,14 +160,13 @@ export default function App() {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: `Duel entre "${nameA}" et "${nameB}". Langue: Français.`,
+        contents: `Compare "${nameA}" et "${nameB}". JSON uniquement.`,
         config: { responseMimeType: "application/json" }
       });
       const text = response.text;
       if (text) {
-        const cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
-        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-        setCompData(JSON.parse(jsonMatch ? jsonMatch[0] : cleaned));
+        const match = text.match(/\{[\s\S]*\}/);
+        setCompData(JSON.parse(match ? match[0] : text));
       }
     } catch (err) {
       console.error("Comparison Error:", err);
@@ -181,7 +189,7 @@ export default function App() {
       id: 'gen-' + Date.now(),
       name: productName,
       image_url: existingImage,
-      description: "L'intelligence artificielle analyse les caractéristiques du produit...",
+      description: "Synchronisation avec l'intelligence artificielle en cours...",
       price: 0,
       category: "Expertise"
     });
@@ -199,18 +207,18 @@ export default function App() {
           ...analysis, 
           totalReviews: 4500,
           opportunityScore: analysis.opportunityScore || 85,
-          opportunityLabel: analysis.opportunityLabel || "Excellent Rapport Qualité/Prix"
+          opportunityLabel: analysis.opportunityLabel || "Score de satisfaction élevé"
         });
       } else {
         setProduct(prev => prev ? { 
           ...prev, 
-          description: "Analyse en direct impossible. Veuillez essayer avec un nom de modèle plus précis (ex: iPhone 16 Pro au lieu de iPhone)." 
+          description: "Analyse en direct instable pour ce modèle. Veuillez réessayer avec un nom plus précis ou vérifier votre connexion." 
         } : null);
       }
     } catch (err) {
-      console.error("Search Flow Error:", err);
+      console.error("Critical Failure:", err);
     } finally {
-      setTimeout(() => setShowLoadingOverlay(false), 400);
+      setTimeout(() => setShowLoadingOverlay(false), 500);
     }
   };
 
@@ -244,7 +252,7 @@ export default function App() {
       <main className="flex-grow">
         {view === 'home' && (
           <section className="pt-20 sm:pt-32 pb-24 sm:pb-40 px-6 max-w-[1400px] mx-auto text-center">
-            <div className="inline-block px-6 sm:px-8 py-2 sm:py-2.5 bg-white/30 rounded-full border border-white/50 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.5em] mb-8 sm:mb-12 shadow-sm italic">Intelligence Artificielle Certifiée v5.4</div>
+            <div className="inline-block px-6 sm:px-8 py-2 sm:py-2.5 bg-white/30 rounded-full border border-white/50 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.5em] mb-8 sm:mb-12 shadow-sm italic">Intelligence Artificielle Certifiée v6.0</div>
             <h2 className="text-4xl sm:text-6xl md:text-8xl font-black italic uppercase mb-10 sm:mb-14 tracking-tighter leading-tight">Décodez la vérité <br/><span className="text-[#4158D0]">en un clic.</span></h2>
             
             <form onSubmit={(e) => handleSearch(query, undefined, e)} className="max-w-2xl mx-auto flex flex-col sm:flex-row gap-4 bg-white/40 p-2 sm:p-3 rounded-[30px] sm:rounded-[40px] shadow-2xl backdrop-blur-md border border-white/60 group">
@@ -362,7 +370,7 @@ export default function App() {
                   <h3 className="text-2xl sm:text-4xl font-black italic uppercase tracking-tighter">ANALYSE MARCHÉ <span className="hidden sm:inline text-[#4158D0] text-xl font-bold ml-6">— LIVE STATS</span></h3>
                   <div className="flex gap-3 sm:gap-4">
                     <div className="px-4 sm:px-6 py-2 sm:py-3 bg-emerald-100/50 text-emerald-700 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest">Live: Actif</div>
-                    <div className="px-4 sm:px-6 py-2 sm:py-3 bg-blue-100/50 text-blue-700 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest">v5.4 Certifié</div>
+                    <div className="px-4 sm:px-6 py-2 sm:py-3 bg-blue-100/50 text-blue-700 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest">v6.0 Certifié</div>
                   </div>
                 </div>
                 
@@ -370,12 +378,12 @@ export default function App() {
                    <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#4158D0] rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-white shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-shopping-cart text-sm sm:text-base"></i></div>
                       <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">VERDICT ACHAT</p>
-                      <p className="text-xl sm:text-3xl font-black italic text-[#4158D0] uppercase tracking-tighter">{aiVerdict?.marketMoment || 'Achat Conseillé'}</p>
+                      <p className="text-xl sm:text-3xl font-black italic text-[#4158D0] uppercase tracking-tighter">{aiVerdict?.marketMoment || 'Analyse...'}</p>
                    </div>
                    <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#FFD700] rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-[#050A30] shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-tag text-sm sm:text-base"></i></div>
                       <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">MEILLEUR PRIX</p>
-                      <p className="text-xl sm:text-3xl font-black italic tracking-tighter">{aiVerdict?.marketBestPrice || 'Voir Offres'}</p>
+                      <p className="text-xl sm:text-3xl font-black italic tracking-tighter">{aiVerdict?.marketBestPrice || 'Analyse...'}</p>
                    </div>
                    <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#C850C0] rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-white shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-random text-sm sm:text-base"></i></div>
@@ -385,17 +393,17 @@ export default function App() {
                    <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-500 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-white shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-chart-line text-sm sm:text-base"></i></div>
                       <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">OPPORTUNITÉ</p>
-                      <p className="text-2xl sm:text-4xl font-black italic text-emerald-600 tracking-tighter">{aiVerdict?.opportunityScore || 85}%</p>
+                      <p className="text-2xl sm:text-4xl font-black italic text-emerald-600 tracking-tighter">{aiVerdict?.opportunityScore || 0}%</p>
                    </div>
                 </div>
 
                 <div className="px-6 sm:px-20 py-10 sm:py-14 bg-black/5 border-t border-black/5">
                    <div className="h-6 sm:h-9 w-full bg-black/5 rounded-full overflow-hidden shadow-inner p-1 sm:p-1.5">
-                      <div className="h-full bg-gradient-to-r from-[#4158D0] via-[#C850C0] to-[#FFCC70] transition-all duration-1000 rounded-full shadow-lg" style={{ width: `${aiVerdict?.opportunityScore || 85}%` }}></div>
+                      <div className="h-full bg-gradient-to-r from-[#4158D0] via-[#C850C0] to-[#FFCC70] transition-all duration-1000 rounded-full shadow-lg" style={{ width: `${aiVerdict?.opportunityScore || 0}%` }}></div>
                    </div>
                    <div className="flex flex-col sm:row justify-between mt-4 sm:mt-6 gap-2">
                      <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest opacity-20 italic">Score de Satisfaction Global</span>
-                     <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-[#4158D0] italic">{aiVerdict?.opportunityLabel || 'Excellent'}</span>
+                     <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-[#4158D0] italic">{aiVerdict?.opportunityLabel || 'Calcul...'}</span>
                    </div>
                 </div>
               </div>
@@ -410,7 +418,7 @@ export default function App() {
              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-[#050A30] rounded-[18px] sm:rounded-[22px] flex items-center justify-center shadow-2xl"><i className="fas fa-bolt text-white text-xl sm:text-3xl"></i></div>
              <span className="text-3xl sm:text-5xl font-black italic uppercase tracking-tighter">Avis<span className="text-[#4158D0]">Score</span></span>
            </div>
-           <p className="text-[10px] sm:text-[14px] font-bold uppercase tracking-[0.4em] sm:tracking-[1em] opacity-20 italic px-4">© AvisScore Excellence v5.4 — Intelligence Certifiée 2025</p>
+           <p className="text-[10px] sm:text-[14px] font-bold uppercase tracking-[0.4em] sm:tracking-[1em] opacity-20 italic px-4">© AvisScore Excellence v6.0 — Intelligence Certifiée 2025</p>
         </div>
       </footer>
     </div>
