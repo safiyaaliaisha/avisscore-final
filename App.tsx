@@ -138,46 +138,49 @@ export default function App() {
     }
   };
 
-  const handleSearch = async (productName: string, existingImage?: string) => {
+  const handleSearch = async (productName: string, existingImage?: string, e?: React.FormEvent | React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (!productName) return;
     
-    // 1. Démarrer l'overlay et changer de vue IMMÉDIATEMENT
+    // 1. Démarrer l'overlay et changer de vue IMMÉDIATEMENT pour "bloquer" la navigation
     setShowLoadingOverlay(true);
-    setView('detail');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-
-    // 2. Initialiser l'état local pour ne pas avoir de crash
-    setProduct({
+    
+    // On réinitialise les données pour le nouveau produit
+    const tempProduct: Product = {
       id: 'gen-' + Date.now(),
       name: productName,
       image_url: existingImage,
-      description: "Chargement de l'analyse en cours...",
+      description: "Analyse des données en temps réel...",
       price: 0,
       category: "Analyse"
-    });
+    };
+    
+    setProduct(tempProduct);
     setAiVerdict(null);
+    setView('detail');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     try {
-      // 3. Lancer l'analyse AI pendant que l'utilisateur voit l'overlay
+      // 2. Lancer l'analyse AI
       const analysis = await performAIAnalysis(productName);
       
       if (analysis) {
-        // 4. Mettre à jour les données une fois reçues
-        setProduct(prev => prev ? {
-          ...prev,
+        // 3. Mettre à jour les données une fois reçues
+        setProduct({
+          ...tempProduct,
           image_url: existingImage || analysis.image_url,
           description: analysis.description,
-        } : null);
+        });
         setAiVerdict({ ...analysis, totalReviews: 4500 });
-      } else {
-        // Fallback si l'IA échoue
-        setProduct(prev => prev ? { ...prev, description: "L'analyse IA n'a pas pu être générée. Veuillez réessayer." } : null);
       }
     } catch (err) {
       console.error("Search Error:", err);
     } finally {
-      // 5. Cacher l'overlay avec un léger délai pour stabiliser le rendu
-      setTimeout(() => setShowLoadingOverlay(false), 400);
+      // 4. Cacher l'overlay
+      setTimeout(() => setShowLoadingOverlay(false), 300);
     }
   };
 
@@ -214,7 +217,7 @@ export default function App() {
             <div className="inline-block px-6 sm:px-8 py-2 sm:py-2.5 bg-white/30 rounded-full border border-white/50 text-[8px] sm:text-[10px] font-black uppercase tracking-[0.5em] mb-8 sm:mb-12 shadow-sm italic">Intelligence Artificielle Certifiée v5.4</div>
             <h2 className="text-4xl sm:text-6xl md:text-8xl font-black italic uppercase mb-10 sm:mb-14 tracking-tighter leading-tight">Décodez la vérité <br/><span className="text-[#4158D0]">en un clic.</span></h2>
             
-            <form onSubmit={(e) => { e.preventDefault(); handleSearch(query); }} className="max-w-2xl mx-auto flex flex-col sm:flex-row gap-4 bg-white/40 p-2 sm:p-3 rounded-[30px] sm:rounded-[40px] shadow-2xl backdrop-blur-md border border-white/60 group">
+            <form onSubmit={(e) => handleSearch(query, undefined, e)} className="max-w-2xl mx-auto flex flex-col sm:flex-row gap-4 bg-white/40 p-2 sm:p-3 rounded-[30px] sm:rounded-[40px] shadow-2xl backdrop-blur-md border border-white/60 group">
               <div className="flex flex-1 items-center px-4 sm:px-6">
                 <input type="text" placeholder="Entrez un modèle..." className="flex-1 bg-transparent py-4 sm:py-6 outline-none font-bold text-lg sm:text-xl placeholder:text-[#050A30]/60" value={query} onChange={(e) => setQuery(e.target.value)} />
                 <i className="fas fa-barcode text-2xl sm:text-3xl text-[#050A30]/40 group-hover:text-[#4158D0] transition-colors"></i>
@@ -224,7 +227,7 @@ export default function App() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 mt-24 sm:mt-48">
                {latestReviews.slice(0, 3).map((rev, i) => (
-                 <div key={i} className="glass-card p-5 sm:p-6 rounded-[30px] sm:rounded-[40px] cursor-pointer hover:translate-y-[-10px] transition-all duration-500 text-left relative overflow-hidden group/card" onClick={() => handleSearch(rev.product_name || '', rev.image_url || undefined)}>
+                 <div key={i} className="glass-card p-5 sm:p-6 rounded-[30px] sm:rounded-[40px] cursor-pointer hover:translate-y-[-10px] transition-all duration-500 text-left relative overflow-hidden group/card" onClick={(e) => handleSearch(rev.product_name || '', rev.image_url || undefined, e)}>
                    <ProductImage src={rev.image_url || undefined} alt={rev.product_name || ''} className="w-full aspect-[3/2] rounded-[20px] sm:rounded-[30px] mb-6 sm:mb-8 group-hover/card:scale-105" />
                    <h4 className="font-black text-lg sm:text-xl italic uppercase truncate mb-3 sm:mb-4">{rev.product_name}</h4>
                    <div className="flex flex-col gap-3 sm:gap-4 border-t border-black/5 pt-4">
@@ -261,7 +264,7 @@ export default function App() {
           </section>
         )}
 
-        {/* Note: Detail View always active if product exists, data loaded below loading cover */}
+        {/* Note: Updated conditional logic to ensure view displays during loading */}
         {view === 'detail' && product && (
           <section className="pb-24 sm:pb-40 max-w-[1450px] mx-auto px-4 sm:px-6 pt-16 sm:pt-24 animate-fade-in">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 sm:gap-24 items-start mb-16 sm:mb-28">
