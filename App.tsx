@@ -99,31 +99,38 @@ export default function App() {
   const performAIAnalysis = async (productName: string) => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = `Analyse le produit: "${productName}". 
-      Constraints: 
-      - Language: FRENCH ONLY. 
-      - Format: JSON STRICT.
-      - Output: JSON object {score (number 0-100), image_url, description, pros (array of 5 strings), cons (array of 5 strings), verdict, marketMoment, marketBestPrice, marketAlternative, opportunityScore (number 0-100), opportunityLabel}.`;
-
+      // Using responseSchema to ensure the AI always returns valid, structured JSON.
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: prompt,
+        contents: `Fourni une analyse exhaustive en Français pour le produit: "${productName}".`,
         config: { 
+          systemInstruction: "Tu es un expert en technologie et analyse de produits. Réponds uniquement par un objet JSON valide.",
           responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              score: { type: Type.NUMBER, description: "Score global sur 100" },
+              image_url: { type: Type.STRING, description: "URL d'une image représentative" },
+              description: { type: Type.STRING, description: "Description technique concise" },
+              pros: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Liste de 5 points forts" },
+              cons: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Liste de 5 points faibles" },
+              verdict: { type: Type.STRING },
+              marketMoment: { type: Type.STRING, description: "Moment d'achat (ex: Achetez maintenant)" },
+              marketBestPrice: { type: Type.STRING, description: "Estimation du meilleur prix" },
+              marketAlternative: { type: Type.STRING, description: "Meilleure alternative" },
+              opportunityScore: { type: Type.NUMBER, description: "Score d'opportunité 0-100" },
+              opportunityLabel: { type: Type.STRING, description: "Label court de satisfaction" }
+            },
+            required: ["score", "description", "pros", "cons", "marketMoment", "marketBestPrice", "marketAlternative", "opportunityScore", "opportunityLabel"]
+          }
         }
       });
       
       const text = response.text;
       if (!text) return null;
-      
-      // Attempt to extract JSON even if model adds markdown
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
       return JSON.parse(text);
     } catch (e) { 
-      console.error("AI Analysis Error:", e);
+      console.error("AI Analysis Critical Error:", e);
       return null; 
     }
   };
@@ -133,17 +140,36 @@ export default function App() {
     setShowLoadingOverlay(true);
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = `Duel technique: "${nameA}" vs "${nameB}". Format JSON: {summary, winner, criteria:[{label, productA, productB, better:A/B/Equal}]}. Langue: Français.`;
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: prompt,
+        contents: `Duel technique détaillé entre "${nameA}" et "${nameB}". Langue: Français.`,
         config: { 
           responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              summary: { type: Type.STRING },
+              winner: { type: Type.STRING },
+              criteria: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    label: { type: Type.STRING },
+                    productA: { type: Type.STRING },
+                    productB: { type: Type.STRING },
+                    better: { type: Type.STRING, enum: ["A", "B", "Equal"] }
+                  },
+                  required: ["label", "productA", "productB", "better"]
+                }
+              }
+            },
+            required: ["summary", "winner", "criteria"]
+          }
         }
       });
       const text = response.text;
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      setCompData(JSON.parse(jsonMatch ? jsonMatch[0] : text));
+      if (text) setCompData(JSON.parse(text));
     } catch (err) {
       console.error("Comparison Error:", err);
     } finally { 
@@ -158,7 +184,7 @@ export default function App() {
     }
     if (!productName) return;
     
-    // Switch view immediately to prevent staying on home
+    // Immediate state transition to prevent staying on Home screen
     setView('detail');
     setShowLoadingOverlay(true);
     setAiVerdict(null);
@@ -166,9 +192,9 @@ export default function App() {
       id: 'gen-' + Date.now(),
       name: productName,
       image_url: existingImage,
-      description: "Initialisation de l'analyse IA...",
+      description: "Chargement de l'intelligence artificielle en cours...",
       price: 0,
-      category: "Analyse"
+      category: "Analyse IA"
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -177,21 +203,21 @@ export default function App() {
       if (analysis) {
         setProduct(prev => prev ? {
           ...prev,
-          image_url: existingImage || analysis.image_url,
+          image_url: existingImage || analysis.image_url || prev.image_url,
           description: analysis.description || prev.description,
         } : null);
         setAiVerdict({ ...analysis, totalReviews: 4500 });
       } else {
         setProduct(prev => prev ? { 
           ...prev, 
-          description: "Analyse indisponible. Veuillez réessayer avec un nom plus précis." 
+          description: "Désolé, l'analyse détaillée n'est pas disponible pour le moment. Veuillez vérifier le nom du produit ou votre connexion." 
         } : null);
       }
     } catch (err) {
-      console.error("Search Logic Error:", err);
+      console.error("Critical Search Handler Error:", err);
     } finally {
-      // Ensure overlay is closed no matter what
-      setShowLoadingOverlay(false);
+      // Small timeout for smooth UI transition
+      setTimeout(() => setShowLoadingOverlay(false), 500);
     }
   };
 
