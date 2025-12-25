@@ -99,35 +99,44 @@ export default function App() {
   const performAIAnalysis = async (productName: string) => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      // Using responseSchema to ensure the AI always returns valid, structured JSON.
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: `Fourni une analyse exhaustive en Français pour le produit: "${productName}".`,
+        contents: `Génère une analyse exhaustive en Français pour le produit suivant: "${productName}".`,
         config: { 
-          systemInstruction: "Tu es un expert en technologie et analyse de produits. Réponds uniquement par un objet JSON valide.",
+          systemInstruction: "Tu es un expert en technologie. Réponds UNIQUEMENT par un objet JSON valide suivant scrupuleusement le schéma fourni. Pas de texte avant ou après.",
           responseMimeType: "application/json",
+          thinkingConfig: { thinkingBudget: 0 },
           responseSchema: {
             type: Type.OBJECT,
             properties: {
-              score: { type: Type.NUMBER, description: "Score global sur 100" },
-              image_url: { type: Type.STRING, description: "URL d'une image représentative" },
-              description: { type: Type.STRING, description: "Description technique concise" },
-              pros: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Liste de 5 points forts" },
-              cons: { type: Type.ARRAY, items: { type: Type.STRING }, description: "Liste de 5 points faibles" },
+              score: { type: Type.NUMBER },
+              image_url: { type: Type.STRING },
+              description: { type: Type.STRING },
+              pros: { type: Type.ARRAY, items: { type: Type.STRING } },
+              cons: { type: Type.ARRAY, items: { type: Type.STRING } },
               verdict: { type: Type.STRING },
-              marketMoment: { type: Type.STRING, description: "Moment d'achat (ex: Achetez maintenant)" },
-              marketBestPrice: { type: Type.STRING, description: "Estimation du meilleur prix" },
-              marketAlternative: { type: Type.STRING, description: "Meilleure alternative" },
-              opportunityScore: { type: Type.NUMBER, description: "Score d'opportunité 0-100" },
-              opportunityLabel: { type: Type.STRING, description: "Label court de satisfaction" }
+              marketMoment: { type: Type.STRING },
+              marketBestPrice: { type: Type.STRING },
+              marketAlternative: { type: Type.STRING },
+              opportunityScore: { type: Type.NUMBER },
+              opportunityLabel: { type: Type.STRING }
             },
             required: ["score", "description", "pros", "cons", "marketMoment", "marketBestPrice", "marketAlternative", "opportunityScore", "opportunityLabel"]
           }
         }
       });
       
-      const text = response.text;
+      let text = response.text;
       if (!text) return null;
+      
+      // Safety cleaning: extract JSON content if the model wrapped it in markdown
+      text = text.replace(/```json/g, "").replace(/```/g, "").trim();
+      const jsonStart = text.indexOf('{');
+      const jsonEnd = text.lastIndexOf('}');
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        text = text.substring(jsonStart, jsonEnd + 1);
+      }
+      
       return JSON.parse(text);
     } catch (e) { 
       console.error("AI Analysis Critical Error:", e);
@@ -142,9 +151,10 @@ export default function App() {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: `Duel technique détaillé entre "${nameA}" et "${nameB}". Langue: Français.`,
+        contents: `Duel technique entre "${nameA}" et "${nameB}".`,
         config: { 
           responseMimeType: "application/json",
+          thinkingConfig: { thinkingBudget: 0 },
           responseSchema: {
             type: Type.OBJECT,
             properties: {
@@ -169,7 +179,10 @@ export default function App() {
         }
       });
       const text = response.text;
-      if (text) setCompData(JSON.parse(text));
+      if (text) {
+        const cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
+        setCompData(JSON.parse(cleaned));
+      }
     } catch (err) {
       console.error("Comparison Error:", err);
     } finally { 
@@ -184,7 +197,6 @@ export default function App() {
     }
     if (!productName) return;
     
-    // Immediate state transition to prevent staying on Home screen
     setView('detail');
     setShowLoadingOverlay(true);
     setAiVerdict(null);
@@ -192,7 +204,7 @@ export default function App() {
       id: 'gen-' + Date.now(),
       name: productName,
       image_url: existingImage,
-      description: "Chargement de l'intelligence artificielle en cours...",
+      description: "L'IA analyse les spécifications...",
       price: 0,
       category: "Analyse IA"
     });
@@ -210,14 +222,13 @@ export default function App() {
       } else {
         setProduct(prev => prev ? { 
           ...prev, 
-          description: "Désolé, l'analyse détaillée n'est pas disponible pour le moment. Veuillez vérifier le nom du produit ou votre connexion." 
+          description: "Désolé, l'analyse détaillée n'est pas disponible pour le moment. Veuillez vérifier le nom du produit ou votre connexion internet." 
         } : null);
       }
     } catch (err) {
       console.error("Critical Search Handler Error:", err);
     } finally {
-      // Small timeout for smooth UI transition
-      setTimeout(() => setShowLoadingOverlay(false), 500);
+      setTimeout(() => setShowLoadingOverlay(false), 300);
     }
   };
 
