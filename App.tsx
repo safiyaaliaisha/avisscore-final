@@ -96,16 +96,17 @@ export default function App() {
     }
   };
 
-  const performAIAnalysis = async (productName: string, reviews: Review[]) => {
+  const performAIAnalysis = async (productName: string) => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = `Analyse ultra-rapide du produit "${productName}". Répond uniquement en JSON strict: {"verdict": "phrase", "pros": ["3 points"], "cons": ["3 points"], "score": 0-100, "marketMoment": "ACHETER/ATTENDRE", "marketBestPrice": "prix estimé", "marketAlternative": "nom court", "opportunityScore": 0-100, "opportunityLabel": "Niveau"}`;
+      const prompt = `Analyse: ${productName}. Constraints: Language=FRENCH ONLY. Map: Tech->(Img:eBay, Desc:Fnac); Home->(Img:LeroyMerlin, Desc:ManoMano); Cars->(Img:NetCarShow, Desc:Official); Others->(Img:Rakuten). Output: JSON only {score, image_url, description, pros:[exact 5 items in french], cons:[exact 5 items in french], verdict, marketMoment, marketBestPrice, marketAlternative, opportunityScore, opportunityLabel}.`;
+
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: prompt,
         config: { 
           responseMimeType: "application/json",
-          thinkingConfig: { thinkingBudget: 0 } // Désactivation de la réflexion pour vitesse max
+          thinkingConfig: { thinkingBudget: 0 }
         }
       });
       return JSON.parse(response.text);
@@ -120,7 +121,7 @@ export default function App() {
     setShowLoadingOverlay(true);
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = `Compare "${nameA}" vs "${nameB}". JSON: {"summary": "...", "winner": "...", "criteria": [{"label": "...", "productA": "...", "productB": "...", "better": "A/B/Equal"}]}`;
+      const prompt = `Duel: "${nameA}" vs "${nameB}". Constraints: Language=FRENCH ONLY. JSON only {summary, winner, criteria:[{label, productA, productB, better:A/B/Equal}]}.`;
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: prompt,
@@ -137,39 +138,43 @@ export default function App() {
     }
   };
 
-  const handleSearch = async (productName: string) => {
+  const handleSearch = async (productName: string, existingImage?: string) => {
     if (!productName) return;
-    setShowLoadingOverlay(true); // Loader plein écran court
-    setAiVerdict(null); 
+    setShowLoadingOverlay(true);
     
+    // On réinitialise les données pour éviter de voir l'ancien produit pendant un quart de seconde
+    setProduct(null);
+    setAiVerdict(null);
+
     try {
-      // 1. Récupération immédiate des données Supabase
-      const { data: productData } = await supabase.from('products').select('*').ilike('name', `%${productName}%`).maybeSingle();
-      const { data: reviewsData } = await supabase.from('my_reviews').select('*').ilike('product_name', `%${productName}%`);
+      // 1. On attend que l'IA finisse COMPLÈTEMENT
+      const analysis = await performAIAnalysis(productName);
       
-      let currentProduct = productData || { 
-        id: 'gen-' + Date.now(), 
-        name: reviewsData?.[0]?.product_name || productName, 
-        image_url: reviewsData?.[0]?.image_url || undefined, 
-        description: reviewsData?.[0]?.review_text || "Préparation de l'analyse personnalisée...", 
-        price: 0, 
-        category: "Tech" 
-      };
-
-      // 2. Affichage immédiat de la page (Plus d'attente ici !)
-      setProduct(currentProduct);
-      setView('detail');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      setShowLoadingOverlay(false); // On libère l'écran tout de suite
-
-      // 3. Analyse IA en arrière-plan (Background)
-      const analysis = await performAIAnalysis(currentProduct.name, reviewsData || []);
       if (analysis) {
-        setAiVerdict({ ...analysis, totalReviews: (reviewsData || []).length || 4500 });
+        // 2. On prépare tout en mémoire
+        const finalProduct: Product = {
+          id: 'gen-' + Date.now(),
+          name: productName,
+          image_url: existingImage || analysis.image_url,
+          description: analysis.description,
+          price: 0,
+          category: "Analyse"
+        };
+        const finalVerdict = { ...analysis, totalReviews: 4500 };
+
+        // 3. On met à jour l'état (React va grouper ces changements)
+        setProduct(finalProduct);
+        setAiVerdict(finalVerdict);
+        
+        // 4. On change de vue seulement maintenant
+        setView('detail');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (err) {
       console.error("Search Error:", err);
-      setShowLoadingOverlay(false);
+    } finally {
+      // On garde l'overlay un tout petit peu plus pour laisser le temps au rendu de se stabiliser
+      setTimeout(() => setShowLoadingOverlay(false), 200);
     }
   };
 
@@ -216,7 +221,7 @@ export default function App() {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 sm:gap-10 mt-24 sm:mt-48">
                {latestReviews.slice(0, 3).map((rev, i) => (
-                 <div key={i} className="glass-card p-5 sm:p-6 rounded-[30px] sm:rounded-[40px] cursor-pointer hover:translate-y-[-10px] transition-all duration-500 text-left relative overflow-hidden group/card" onClick={() => handleSearch(rev.product_name || '')}>
+                 <div key={i} className="glass-card p-5 sm:p-6 rounded-[30px] sm:rounded-[40px] cursor-pointer hover:translate-y-[-10px] transition-all duration-500 text-left relative overflow-hidden group/card" onClick={() => handleSearch(rev.product_name || '', rev.image_url || undefined)}>
                    <ProductImage src={rev.image_url || undefined} alt={rev.product_name || ''} className="w-full aspect-[3/2] rounded-[20px] sm:rounded-[30px] mb-6 sm:mb-8 group-hover/card:scale-105" />
                    <h4 className="font-black text-lg sm:text-xl italic uppercase truncate mb-3 sm:mb-4">{rev.product_name}</h4>
                    <div className="flex flex-col gap-3 sm:gap-4 border-t border-black/5 pt-4">
@@ -253,7 +258,8 @@ export default function App() {
           </section>
         )}
 
-        {view === 'detail' && product && (
+        {/* Note: Detail is only rendered if product AND aiVerdict are loaded */}
+        {view === 'detail' && product && aiVerdict && (
           <section className="pb-24 sm:pb-40 max-w-[1450px] mx-auto px-4 sm:px-6 pt-16 sm:pt-24 animate-fade-in">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 sm:gap-24 items-start mb-16 sm:mb-28">
               <div className="w-full bg-white rounded-[35px] sm:rounded-[56px] overflow-hidden shadow-2xl border-[10px] sm:border-[18px] border-white lg:sticky lg:top-32">
@@ -261,21 +267,21 @@ export default function App() {
               </div>
               <div className="flex flex-col items-start space-y-12 sm:space-y-16">
                 <div className="w-full">
-                  <h2 className="text-4xl sm:text-6xl md:text-8xl font-black italic uppercase tracking-tighter leading-tight sm:leading-none mb-8 sm:mb-10">{product.name}</h2>
+                  <h2 className="text-3xl sm:text-5xl md:text-6xl font-black italic uppercase tracking-tighter leading-tight sm:leading-none mb-6 sm:mb-8">{product.name}</h2>
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-10 p-5 sm:p-6 bg-white/50 backdrop-blur-3xl border border-white/80 rounded-[35px] sm:rounded-[50px] shadow-2xl w-full sm:w-fit sm:pr-14">
                     <div className="bg-[#050A30] text-white w-20 h-20 sm:w-28 sm:h-28 rounded-[25px] sm:rounded-[35px] flex flex-col items-center justify-center shadow-xl shrink-0">
-                       <span className="text-3xl sm:text-5xl font-black italic">{aiVerdict ? (aiVerdict.score / 10).toFixed(1) : "—"}</span>
+                       <span className="text-3xl sm:text-5xl font-black italic">{(aiVerdict.score / 10).toFixed(1)}</span>
                        <span className="text-[8px] sm:text-[10px] font-bold opacity-40 uppercase">Score IA</span>
                     </div>
                     <div className="flex flex-col gap-4 sm:gap-6 w-full">
                        <div className="flex items-center gap-3 sm:gap-4 bg-white/60 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full border border-white shadow-sm w-full sm:w-auto overflow-hidden">
-                          <StarRating rating={aiVerdict ? 4.8 : 0} size="text-[14px] sm:text-[18px]" />
+                          <StarRating rating={4.8} size="text-[14px] sm:text-[18px]" />
                           <div className="h-4 w-[1px] bg-black/10 mx-1"></div>
                           <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.1em] sm:tracking-[0.3em] text-[#050A30]/60 italic truncate">Indice de Confiance</span>
                        </div>
                        <div className="flex items-center gap-3 sm:gap-4 pl-1 sm:pl-2">
-                          <AvatarStack count={4} size="h-7 w-7 sm:h-8 sm:w-8" />
-                          <span className="text-[8px] sm:text-[10px] font-black opacity-30 uppercase tracking-widest">Vérifié par {aiVerdict?.totalReviews || 4500} experts</span>
+                          <AvatarStack count={4} size="h-7 w-7 sm:h-8 w-8" />
+                          <span className="text-[8px] sm:text-[10px] font-black opacity-30 uppercase tracking-widest">Vérifié par {aiVerdict.totalReviews} experts</span>
                        </div>
                     </div>
                   </div>
@@ -284,29 +290,17 @@ export default function App() {
                   <div className="glass-card p-8 sm:p-12 rounded-[35px] sm:rounded-[45px] bg-white/50 min-h-[250px]">
                     <h3 className="text-[11px] sm:text-[12px] font-black uppercase tracking-[0.4em] sm:tracking-[0.5em] mb-6 sm:mb-10 text-emerald-600 flex justify-between">Points Forts <i className="fas fa-check-circle"></i></h3>
                     <ul className="space-y-4 sm:space-y-5">
-                      {aiVerdict ? aiVerdict.pros.map((p, i) => (
+                      {aiVerdict.pros.map((p, i) => (
                         <li key={i} className="text-[13px] sm:text-[15px] font-bold flex gap-3 sm:gap-4"><span className="w-2 h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></span> <span className="opacity-80">{p}</span></li>
-                      )) : (
-                        <div className="space-y-3">
-                          <div className="animate-pulse h-4 bg-black/5 rounded-full w-3/4"></div>
-                          <div className="animate-pulse h-4 bg-black/5 rounded-full w-2/3"></div>
-                          <div className="animate-pulse h-4 bg-black/5 rounded-full w-1/2"></div>
-                        </div>
-                      )}
+                      ))}
                     </ul>
                   </div>
                   <div className="glass-card p-8 sm:p-12 rounded-[35px] sm:rounded-[45px] bg-white/50 min-h-[250px]">
                     <h3 className="text-[11px] sm:text-[12px] font-black uppercase tracking-[0.4em] sm:tracking-[0.5em] mb-6 sm:mb-10 text-rose-600 flex justify-between">Points Faibles <i className="fas fa-times-circle"></i></h3>
                     <ul className="space-y-4 sm:space-y-5">
-                      {aiVerdict ? aiVerdict.cons.map((c, i) => (
+                      {aiVerdict.cons.map((c, i) => (
                         <li key={i} className="text-[13px] sm:text-[15px] font-bold flex gap-3 sm:gap-4"><span className="w-2 h-2 rounded-full bg-rose-500 mt-2 shrink-0"></span> <span className="opacity-80">{c}</span></li>
-                      )) : (
-                        <div className="space-y-3">
-                          <div className="animate-pulse h-4 bg-black/5 rounded-full w-3/4"></div>
-                          <div className="animate-pulse h-4 bg-black/5 rounded-full w-2/3"></div>
-                          <div className="animate-pulse h-4 bg-black/5 rounded-full w-1/2"></div>
-                        </div>
-                      )}
+                      ))}
                     </ul>
                   </div>
                 </div>
@@ -319,50 +313,48 @@ export default function App() {
               </div>
             </div>
 
-            {aiVerdict && (
-              <div className="glass-card rounded-[40px] sm:rounded-[60px] overflow-hidden shadow-2xl border-white border-[1.5px] sm:border-[2px] mt-10 sm:mt-20 animate-fade-in">
-                <div className="px-6 sm:px-20 pt-10 sm:pt-20 pb-8 sm:pb-12 flex flex-col sm:row justify-between sm:items-center gap-6 border-b border-black/5 bg-white/40">
-                  <h3 className="text-2xl sm:text-4xl font-black italic uppercase tracking-tighter">ANALYSE MARCHÉ <span className="hidden sm:inline text-[#4158D0] text-xl font-bold ml-6">— LIVE STATS</span></h3>
-                  <div className="flex gap-3 sm:gap-4">
-                    <div className="px-4 sm:px-6 py-2 sm:py-3 bg-emerald-100/50 text-emerald-700 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest">Live: Actif</div>
-                    <div className="px-4 sm:px-6 py-2 sm:py-3 bg-blue-100/50 text-blue-700 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest">v5.4 Certifié</div>
-                  </div>
-                </div>
-                
-                <div className="p-6 sm:p-20 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-12 bg-white/20">
-                   <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#4158D0] rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-white shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-shopping-cart text-sm sm:text-base"></i></div>
-                      <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">VERDICT ACHAT</p>
-                      <p className="text-xl sm:text-3xl font-black italic text-[#4158D0] uppercase tracking-tighter">{aiVerdict.marketMoment}</p>
-                   </div>
-                   <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#FFD700] rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-[#050A30] shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-tag text-sm sm:text-base"></i></div>
-                      <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">MEILLEUR PRIX</p>
-                      <p className="text-xl sm:text-3xl font-black italic tracking-tighter">{aiVerdict.marketBestPrice}</p>
-                   </div>
-                   <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#C850C0] rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-white shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-random text-sm sm:text-base"></i></div>
-                      <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">ALTERNATIVE</p>
-                      <p className="text-xl sm:text-3xl font-black italic tracking-tighter uppercase truncate">{aiVerdict.marketAlternative}</p>
-                   </div>
-                   <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-500 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-white shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-chart-line text-sm sm:text-base"></i></div>
-                      <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">OPPORTUNITÉ</p>
-                      <p className="text-2xl sm:text-4xl font-black italic text-emerald-600 tracking-tighter">{aiVerdict.opportunityScore}%</p>
-                   </div>
-                </div>
-
-                <div className="px-6 sm:px-20 py-10 sm:py-14 bg-black/5 border-t border-black/5">
-                   <div className="h-6 sm:h-9 w-full bg-black/5 rounded-full overflow-hidden shadow-inner p-1 sm:p-1.5">
-                      <div className="h-full bg-gradient-to-r from-[#4158D0] via-[#C850C0] to-[#FFCC70] transition-all duration-1000 rounded-full shadow-lg" style={{ width: `${aiVerdict.opportunityScore}%` }}></div>
-                   </div>
-                   <div className="flex flex-col sm:row justify-between mt-4 sm:mt-6 gap-2">
-                     <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest opacity-20 italic">Score de Satisfaction Global</span>
-                     <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-[#4158D0] italic">{aiVerdict.opportunityLabel}</span>
-                   </div>
+            <div className="glass-card rounded-[40px] sm:rounded-[60px] overflow-hidden shadow-2xl border-white border-[1.5px] sm:border-[2px] mt-10 sm:mt-20 animate-fade-in">
+              <div className="px-6 sm:px-20 pt-10 sm:pt-20 pb-8 sm:pb-12 flex flex-col sm:row justify-between sm:items-center gap-6 border-b border-black/5 bg-white/40">
+                <h3 className="text-2xl sm:text-4xl font-black italic uppercase tracking-tighter">ANALYSE MARCHÉ <span className="hidden sm:inline text-[#4158D0] text-xl font-bold ml-6">— LIVE STATS</span></h3>
+                <div className="flex gap-3 sm:gap-4">
+                  <div className="px-4 sm:px-6 py-2 sm:py-3 bg-emerald-100/50 text-emerald-700 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest">Live: Actif</div>
+                  <div className="px-4 sm:px-6 py-2 sm:py-3 bg-blue-100/50 text-blue-700 rounded-xl text-[8px] sm:text-[10px] font-black uppercase tracking-widest">v5.4 Certifié</div>
                 </div>
               </div>
-            )}
+              
+              <div className="p-6 sm:p-20 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-12 bg-white/20">
+                 <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#4158D0] rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-white shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-shopping-cart text-sm sm:text-base"></i></div>
+                    <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">VERDICT ACHAT</p>
+                    <p className="text-xl sm:text-3xl font-black italic text-[#4158D0] uppercase tracking-tighter">{aiVerdict.marketMoment}</p>
+                 </div>
+                 <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#FFD700] rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-[#050A30] shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-tag text-sm sm:text-base"></i></div>
+                    <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">MEILLEUR PRIX</p>
+                    <p className="text-xl sm:text-3xl font-black italic tracking-tighter">{aiVerdict.marketBestPrice}</p>
+                 </div>
+                 <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#C850C0] rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-white shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-random text-sm sm:text-base"></i></div>
+                    <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">ALTERNATIVE</p>
+                    <p className="text-xl sm:text-3xl font-black italic tracking-tighter uppercase truncate">{aiVerdict.marketAlternative}</p>
+                 </div>
+                 <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-500 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-white shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-chart-line text-sm sm:text-base"></i></div>
+                    <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">OPPORTUNITÉ</p>
+                    <p className="text-2xl sm:text-4xl font-black italic text-emerald-600 tracking-tighter">{aiVerdict.opportunityScore}%</p>
+                 </div>
+              </div>
+
+              <div className="px-6 sm:px-20 py-10 sm:py-14 bg-black/5 border-t border-black/5">
+                 <div className="h-6 sm:h-9 w-full bg-black/5 rounded-full overflow-hidden shadow-inner p-1 sm:p-1.5">
+                    <div className="h-full bg-gradient-to-r from-[#4158D0] via-[#C850C0] to-[#FFCC70] transition-all duration-1000 rounded-full shadow-lg" style={{ width: `${aiVerdict.opportunityScore}%` }}></div>
+                 </div>
+                 <div className="flex flex-col sm:row justify-between mt-4 sm:mt-6 gap-2">
+                   <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest opacity-20 italic">Score de Satisfaction Global</span>
+                   <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-[#4158D0] italic">{aiVerdict.opportunityLabel}</span>
+                 </div>
+              </div>
+            </div>
           </section>
         )}
       </main>
