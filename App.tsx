@@ -99,11 +99,14 @@ export default function App() {
   const performAIAnalysis = async (productName: string, reviews: Review[]) => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = `Analyse le produit "${productName}". Format JSON strict: {"verdict": "synthèse", "pros": ["p1", "p2", "p3", "p4", "p5"], "cons": ["c1", "c2", "c3", "c4", "c5"], "score": 0-100, "marketMoment": "ACHETER", "marketBestPrice": "prix", "marketAlternative": "nom", "opportunityScore": 0-100, "opportunityLabel": "NIVEAU"}`;
+      const prompt = `Analyse ultra-rapide du produit "${productName}". Répond uniquement en JSON strict: {"verdict": "phrase", "pros": ["3 points"], "cons": ["3 points"], "score": 0-100, "marketMoment": "ACHETER/ATTENDRE", "marketBestPrice": "prix estimé", "marketAlternative": "nom court", "opportunityScore": 0-100, "opportunityLabel": "Niveau"}`;
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: prompt,
-        config: { responseMimeType: "application/json" }
+        config: { 
+          responseMimeType: "application/json",
+          thinkingConfig: { thinkingBudget: 0 } // Désactivation de la réflexion pour vitesse max
+        }
       });
       return JSON.parse(response.text);
     } catch (e) { 
@@ -117,11 +120,14 @@ export default function App() {
     setShowLoadingOverlay(true);
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const prompt = `Compare "${nameA}" vs "${nameB}". Format JSON: {"summary": "...", "winner": "...", "criteria": [{"label": "...", "productA": "...", "productB": "...", "better": "A/B/Equal"}]}`;
+      const prompt = `Compare "${nameA}" vs "${nameB}". JSON: {"summary": "...", "winner": "...", "criteria": [{"label": "...", "productA": "...", "productB": "...", "better": "A/B/Equal"}]}`;
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: prompt,
-        config: { responseMimeType: "application/json" }
+        config: { 
+          responseMimeType: "application/json",
+          thinkingConfig: { thinkingBudget: 0 }
+        }
       });
       setCompData(JSON.parse(response.text));
     } catch (err) {
@@ -133,11 +139,11 @@ export default function App() {
 
   const handleSearch = async (productName: string) => {
     if (!productName) return;
-    setShowLoadingOverlay(true);
-    setAiVerdict(null); // Reset analysis while loading new one
+    setShowLoadingOverlay(true); // Loader plein écran court
+    setAiVerdict(null); 
     
     try {
-      // 1. First fetch basic data from Supabase
+      // 1. Récupération immédiate des données Supabase
       const { data: productData } = await supabase.from('products').select('*').ilike('name', `%${productName}%`).maybeSingle();
       const { data: reviewsData } = await supabase.from('my_reviews').select('*').ilike('product_name', `%${productName}%`);
       
@@ -145,25 +151,25 @@ export default function App() {
         id: 'gen-' + Date.now(), 
         name: reviewsData?.[0]?.product_name || productName, 
         image_url: reviewsData?.[0]?.image_url || undefined, 
-        description: reviewsData?.[0]?.review_text || "Analyse des données en cours par l'IA...", 
+        description: reviewsData?.[0]?.review_text || "Préparation de l'analyse personnalisée...", 
         price: 0, 
         category: "Tech" 
       };
 
-      // 2. Set view to detail immediately to avoid "stuck" feeling
+      // 2. Affichage immédiat de la page (Plus d'attente ici !)
       setProduct(currentProduct);
       setView('detail');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      setShowLoadingOverlay(false); // On libère l'écran tout de suite
 
-      // 3. Perform AI analysis in the background
+      // 3. Analyse IA en arrière-plan (Background)
       const analysis = await performAIAnalysis(currentProduct.name, reviewsData || []);
       if (analysis) {
         setAiVerdict({ ...analysis, totalReviews: (reviewsData || []).length || 4500 });
       }
     } catch (err) {
       console.error("Search Error:", err);
-    } finally { 
-      setShowLoadingOverlay(false); 
+      setShowLoadingOverlay(false);
     }
   };
 
@@ -280,7 +286,13 @@ export default function App() {
                     <ul className="space-y-4 sm:space-y-5">
                       {aiVerdict ? aiVerdict.pros.map((p, i) => (
                         <li key={i} className="text-[13px] sm:text-[15px] font-bold flex gap-3 sm:gap-4"><span className="w-2 h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></span> <span className="opacity-80">{p}</span></li>
-                      )) : <div className="animate-pulse h-4 bg-black/5 rounded-full w-3/4"></div>}
+                      )) : (
+                        <div className="space-y-3">
+                          <div className="animate-pulse h-4 bg-black/5 rounded-full w-3/4"></div>
+                          <div className="animate-pulse h-4 bg-black/5 rounded-full w-2/3"></div>
+                          <div className="animate-pulse h-4 bg-black/5 rounded-full w-1/2"></div>
+                        </div>
+                      )}
                     </ul>
                   </div>
                   <div className="glass-card p-8 sm:p-12 rounded-[35px] sm:rounded-[45px] bg-white/50 min-h-[250px]">
@@ -288,7 +300,13 @@ export default function App() {
                     <ul className="space-y-4 sm:space-y-5">
                       {aiVerdict ? aiVerdict.cons.map((c, i) => (
                         <li key={i} className="text-[13px] sm:text-[15px] font-bold flex gap-3 sm:gap-4"><span className="w-2 h-2 rounded-full bg-rose-500 mt-2 shrink-0"></span> <span className="opacity-80">{c}</span></li>
-                      )) : <div className="animate-pulse h-4 bg-black/5 rounded-full w-3/4"></div>}
+                      )) : (
+                        <div className="space-y-3">
+                          <div className="animate-pulse h-4 bg-black/5 rounded-full w-3/4"></div>
+                          <div className="animate-pulse h-4 bg-black/5 rounded-full w-2/3"></div>
+                          <div className="animate-pulse h-4 bg-black/5 rounded-full w-1/2"></div>
+                        </div>
+                      )}
                     </ul>
                   </div>
                 </div>
