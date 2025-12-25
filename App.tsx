@@ -103,23 +103,25 @@ export default function App() {
       Constraints: 
       - Language: FRENCH ONLY. 
       - Format: JSON STRICT.
-      - Schema: {score (0-100), image_url, description, pros (5 items), cons (5 items), verdict, marketMoment, marketBestPrice, marketAlternative, opportunityScore, opportunityLabel}.`;
+      - Output: JSON object {score (number 0-100), image_url, description, pros (array of 5 strings), cons (array of 5 strings), verdict, marketMoment, marketBestPrice, marketAlternative, opportunityScore (number 0-100), opportunityLabel}.`;
 
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: prompt,
         config: { 
           responseMimeType: "application/json",
-          thinkingConfig: { thinkingBudget: 0 }
         }
       });
       
       const text = response.text;
-      if (!text) throw new Error("Empty AI response");
+      if (!text) return null;
       
-      // Nettoyage au cas où le modèle renverrait du Markdown
-      const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
-      return JSON.parse(cleaned);
+      // Attempt to extract JSON even if model adds markdown
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+      return JSON.parse(text);
     } catch (e) { 
       console.error("AI Analysis Error:", e);
       return null; 
@@ -137,11 +139,11 @@ export default function App() {
         contents: prompt,
         config: { 
           responseMimeType: "application/json",
-          thinkingConfig: { thinkingBudget: 0 }
         }
       });
-      const cleaned = response.text.replace(/```json/g, '').replace(/```/g, '').trim();
-      setCompData(JSON.parse(cleaned));
+      const text = response.text;
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      setCompData(JSON.parse(jsonMatch ? jsonMatch[0] : text));
     } catch (err) {
       console.error("Comparison Error:", err);
     } finally { 
@@ -156,7 +158,7 @@ export default function App() {
     }
     if (!productName) return;
     
-    // 1. Déclenchement visuel immédiat
+    // Switch view immediately to prevent staying on home
     setView('detail');
     setShowLoadingOverlay(true);
     setAiVerdict(null);
@@ -164,35 +166,32 @@ export default function App() {
       id: 'gen-' + Date.now(),
       name: productName,
       image_url: existingImage,
-      description: "Analyse des données en cours via intelligence artificielle...",
+      description: "Initialisation de l'analyse IA...",
       price: 0,
       category: "Analyse"
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     try {
-      // 2. Appel asynchrone sécurisé
       const analysis = await performAIAnalysis(productName);
-      
       if (analysis) {
         setProduct(prev => prev ? {
           ...prev,
           image_url: existingImage || analysis.image_url,
-          description: analysis.description,
+          description: analysis.description || prev.description,
         } : null);
         setAiVerdict({ ...analysis, totalReviews: 4500 });
       } else {
-        // Fallback en cas d'erreur de l'IA
         setProduct(prev => prev ? { 
           ...prev, 
-          description: "Désolé, l'analyse détaillée n'est pas disponible pour le moment. Veuillez vérifier le nom du produit." 
+          description: "Analyse indisponible. Veuillez réessayer avec un nom plus précis." 
         } : null);
       }
     } catch (err) {
-      console.error("Search Handler Error:", err);
+      console.error("Search Logic Error:", err);
     } finally {
-      // 3. Quoi qu'il arrive, on retire l'overlay de chargement
-      setTimeout(() => setShowLoadingOverlay(false), 400);
+      // Ensure overlay is closed no matter what
+      setShowLoadingOverlay(false);
     }
   };
 
@@ -307,9 +306,9 @@ export default function App() {
                   <div className="glass-card p-8 sm:p-12 rounded-[35px] sm:rounded-[45px] bg-white/50 min-h-[250px]">
                     <h3 className="text-[11px] sm:text-[12px] font-black uppercase tracking-[0.4em] sm:tracking-[0.5em] mb-6 sm:mb-10 text-emerald-600 flex justify-between">Points Forts <i className="fas fa-check-circle"></i></h3>
                     <ul className="space-y-4 sm:space-y-5">
-                      {aiVerdict ? aiVerdict.pros.map((p, i) => (
+                      {aiVerdict?.pros?.map((p, i) => (
                         <li key={i} className="text-[13px] sm:text-[15px] font-bold flex gap-3 sm:gap-4"><span className="w-2 h-2 rounded-full bg-emerald-500 mt-2 shrink-0"></span> <span className="opacity-80">{p}</span></li>
-                      )) : (
+                      )) || (
                         <div className="space-y-3">
                           {[...Array(5)].map((_, i) => <div key={i} className="animate-pulse h-4 bg-black/5 rounded-full w-[80%]"></div>)}
                         </div>
@@ -319,9 +318,9 @@ export default function App() {
                   <div className="glass-card p-8 sm:p-12 rounded-[35px] sm:rounded-[45px] bg-white/50 min-h-[250px]">
                     <h3 className="text-[11px] sm:text-[12px] font-black uppercase tracking-[0.4em] sm:tracking-[0.5em] mb-6 sm:mb-10 text-rose-600 flex justify-between">Points Faibles <i className="fas fa-times-circle"></i></h3>
                     <ul className="space-y-4 sm:space-y-5">
-                      {aiVerdict ? aiVerdict.cons.map((c, i) => (
+                      {aiVerdict?.cons?.map((c, i) => (
                         <li key={i} className="text-[13px] sm:text-[15px] font-bold flex gap-3 sm:gap-4"><span className="w-2 h-2 rounded-full bg-rose-500 mt-2 shrink-0"></span> <span className="opacity-80">{c}</span></li>
-                      )) : (
+                      )) || (
                         <div className="space-y-3">
                           {[...Array(5)].map((_, i) => <div key={i} className="animate-pulse h-4 bg-black/5 rounded-full w-[80%]"></div>)}
                         </div>
@@ -352,32 +351,32 @@ export default function App() {
                    <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#4158D0] rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-white shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-shopping-cart text-sm sm:text-base"></i></div>
                       <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">VERDICT ACHAT</p>
-                      <p className="text-xl sm:text-3xl font-black italic text-[#4158D0] uppercase tracking-tighter">{aiVerdict.marketMoment}</p>
+                      <p className="text-xl sm:text-3xl font-black italic text-[#4158D0] uppercase tracking-tighter">{aiVerdict?.marketMoment || '...'}</p>
                    </div>
                    <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#FFD700] rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-[#050A30] shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-tag text-sm sm:text-base"></i></div>
                       <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">MEILLEUR PRIX</p>
-                      <p className="text-xl sm:text-3xl font-black italic tracking-tighter">{aiVerdict.marketBestPrice}</p>
+                      <p className="text-xl sm:text-3xl font-black italic tracking-tighter">{aiVerdict?.marketBestPrice || '...'}</p>
                    </div>
                    <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#C850C0] rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-white shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-random text-sm sm:text-base"></i></div>
                       <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">ALTERNATIVE</p>
-                      <p className="text-xl sm:text-3xl font-black italic tracking-tighter uppercase truncate">{aiVerdict.marketAlternative}</p>
+                      <p className="text-xl sm:text-3xl font-black italic tracking-tighter uppercase truncate">{aiVerdict?.marketAlternative || '...'}</p>
                    </div>
                    <div className="bg-white/40 p-5 sm:p-10 rounded-[25px] sm:rounded-[40px] border border-white shadow-lg text-center group hover:bg-white/60 transition-all">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-500 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6 text-white shadow-xl group-hover:rotate-6 transition-transform"><i className="fas fa-chart-line text-sm sm:text-base"></i></div>
                       <p className="text-[8px] sm:text-[11px] font-black uppercase tracking-widest opacity-30 mb-3 sm:mb-5">OPPORTUNITÉ</p>
-                      <p className="text-2xl sm:text-4xl font-black italic text-emerald-600 tracking-tighter">{aiVerdict.opportunityScore}%</p>
+                      <p className="text-2xl sm:text-4xl font-black italic text-emerald-600 tracking-tighter">{aiVerdict?.opportunityScore || 0}%</p>
                    </div>
                 </div>
 
                 <div className="px-6 sm:px-20 py-10 sm:py-14 bg-black/5 border-t border-black/5">
                    <div className="h-6 sm:h-9 w-full bg-black/5 rounded-full overflow-hidden shadow-inner p-1 sm:p-1.5">
-                      <div className="h-full bg-gradient-to-r from-[#4158D0] via-[#C850C0] to-[#FFCC70] transition-all duration-1000 rounded-full shadow-lg" style={{ width: `${aiVerdict.opportunityScore}%` }}></div>
+                      <div className="h-full bg-gradient-to-r from-[#4158D0] via-[#C850C0] to-[#FFCC70] transition-all duration-1000 rounded-full shadow-lg" style={{ width: `${aiVerdict?.opportunityScore || 0}%` }}></div>
                    </div>
                    <div className="flex flex-col sm:row justify-between mt-4 sm:mt-6 gap-2">
                      <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest opacity-20 italic">Score de Satisfaction Global</span>
-                     <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-[#4158D0] italic">{aiVerdict.opportunityLabel}</span>
+                     <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-[#4158D0] italic">{aiVerdict?.opportunityLabel || 'Analyse...'}</span>
                    </div>
                 </div>
               </div>
