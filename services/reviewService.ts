@@ -1,13 +1,14 @@
+
 import { supabase } from '../lib/supabaseClient';
-import { Review } from '../types';
+import { Review, Product } from '../types';
 
 /**
- * Fetches the latest reviews directly from Supabase with selective columns for speed.
+ * Fetches the latest reviews directly from Supabase.
  */
 export const fetchLatestReviews = async (limit = 12): Promise<Review[]> => {
   const { data, error } = await supabase
     .from('my_reviews')
-    .select('id, product_name, rating, image_url, created_at')
+    .select('*')
     .order('created_at', { ascending: false })
     .limit(limit);
 
@@ -15,40 +16,37 @@ export const fetchLatestReviews = async (limit = 12): Promise<Review[]> => {
     console.error("Supabase Error (fetchLatestReviews):", error);
     return [];
   }
-  return (data as Review[]) || [];
+  return data || [];
 };
 
 /**
- * Fetches unique product names for comparison, limited to reduce data transfer.
+ * Fetches unique product names for the comparison dropdowns.
  */
 export const fetchUniqueProducts = async (): Promise<string[]> => {
   const { data, error } = await supabase
     .from('my_reviews')
-    .select('product_name')
-    .limit(500); 
+    .select('product_name');
 
   if (error) {
     console.error("Supabase Error (fetchUniqueProducts):", error);
     return [];
   }
   
-  const names: string[] = ((data as any[]) || [])
-    .map(d => d.product_name)
-    .filter((name): name is string => typeof name === 'string' && name.length > 0);
+  const names = data
+    ?.map(d => d.product_name)
+    .filter((name): name is string => typeof name === 'string' && name.length > 0) || [];
     
-  return Array.from(new Set(names)).sort();
+  return Array.from(new Set(names));
 };
 
 /**
  * Fetches product data and its reviews from 'my_reviews' table by product name.
- * Uses selective columns for faster fetching.
  */
 export const fetchProductDataFromReviews = async (name: string): Promise<{ reviews: Review[], firstMatch: Review | null }> => {
   const { data, error } = await supabase
     .from('my_reviews')
-    .select('id, product_name, rating, review_text, author_name, created_at, source, image_url')
-    .ilike('product_name', `%${name}%`)
-    .limit(10); 
+    .select('*')
+    .ilike('product_name', `%${name}%`);
 
   if (error) {
     console.error("Supabase Error (fetchProductDataFromReviews):", error);
@@ -56,7 +54,7 @@ export const fetchProductDataFromReviews = async (name: string): Promise<{ revie
   }
   
   return { 
-    reviews: (data as Review[]) || [], 
-    firstMatch: data && data.length > 0 ? (data[0] as Review) : null 
+    reviews: data || [], 
+    firstMatch: data && data.length > 0 ? data[0] : null 
   };
-}
+};
