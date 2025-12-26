@@ -31,18 +31,17 @@ export interface Product {
 export interface AIAnalysis {
   verdict: string;
   punchyVerdict: string;
-  // Fix: Added missing description property required by App.tsx
-  description: string;
   pros: string[];
   cons: string[];
   score: number;
+  description: string;
   sourceScores: { site: string; score: number }[];
   totalReviews: number;
   buyingWindow: string;
   buyingConfidence: number;
   marketMoment: string;
   marketBestPrice: string;
-  marketAlternatives: string[]; // Liste de 4 alternatives réelles avec prix
+  marketAlternatives: string[];
   durabilityScore: number;
   trustStatement: string;
   oneWordVerdict: string;
