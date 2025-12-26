@@ -15,7 +15,7 @@ export const fetchLatestReviews = async (limit = 12): Promise<Review[]> => {
     console.error("Supabase Error (fetchLatestReviews):", error);
     return [];
   }
-  return data || [];
+  return (data as Review[]) || [];
 };
 
 /**
@@ -25,7 +25,7 @@ export const fetchUniqueProducts = async (): Promise<string[]> => {
   const { data, error } = await supabase
     .from('my_reviews')
     .select('product_name')
-    .limit(500); // Optimization: Fetch a reasonable amount to keep it fast
+    .limit(500); 
 
   if (error) {
     console.error("Supabase Error (fetchUniqueProducts):", error);
@@ -48,7 +48,7 @@ export const fetchProductDataFromReviews = async (name: string): Promise<{ revie
     .from('my_reviews')
     .select('id, product_name, rating, review_text, author_name, created_at, source, image_url')
     .ilike('product_name', `%${name}%`)
-    .limit(10); // Optimization: Strict limit for maximum speed
+    .limit(10); 
 
   if (error) {
     console.error("Supabase Error (fetchProductDataFromReviews):", error);
@@ -56,7 +56,7 @@ export const fetchProductDataFromReviews = async (name: string): Promise<{ revie
   }
   
   return { 
-    reviews: data || [], 
-    firstMatch: data && data.length > 0 ? data[0] : null 
+    reviews: (data as Review[]) || [], 
+    firstMatch: data && data.length > 0 ? (data[0] as Review) : null 
   };
 }

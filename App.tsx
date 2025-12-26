@@ -4,7 +4,7 @@ import { fetchLatestReviews, fetchProductDataFromReviews, fetchUniqueProducts } 
 import { Product, Review, AIAnalysis, MarketAlternative } from './types';
 
 const DEFAULT_ANALYSIS: AIAnalysis = {
-  score: 92, // Résultat 9.2 comme demandé
+  score: 92, // Affiche 9.2
   description: "Analyse technique optimisée. Performances exceptionnelles pour sa catégorie.",
   pros: ["Efficacité", "Construction", "Autonomie", "Design", "Interface", "Connectivité"],
   cons: ["Prix", "Stock", "Poids", "Accessoires", "Chargeur", "Logiciel"],
@@ -72,7 +72,7 @@ export default function App() {
     }
   };
 
-  const handleSearch = async (targetName: string) => {
+  const handleSearch = async (targetName: string, initialImg: string = "") => {
     if (!targetName.trim()) return;
     
     setView('detail');
@@ -82,7 +82,7 @@ export default function App() {
     const initialProduct: Product = { 
       id: 'p-' + Date.now(), 
       name: targetName, 
-      image_url: "", 
+      image_url: initialImg, 
       description: "", 
       price: 0, 
       category: "Tech", 
@@ -94,16 +94,20 @@ export default function App() {
     // Supabase fetch with 4s timeout (The Charge fix)
     withTimeout(fetchProductDataFromReviews(targetName), 4000)
       .then(dbData => {
-        if (dbData?.firstMatch) {
+        if (dbData && dbData.reviews && dbData.reviews.length > 0) {
+          // Optimization: Search for the first review that actually has an actual image URL
+          const reviewWithImage = dbData.reviews.find(r => r.image_url && r.image_url.trim().startsWith('http'));
+          const bestImage = reviewWithImage ? reviewWithImage.image_url : (dbData.firstMatch?.image_url || initialImg);
+          
           setProduct(prev => prev ? { 
             ...prev, 
-            image_url: dbData.firstMatch?.image_url || "", 
+            image_url: bestImage || initialImg, 
             reviews: dbData.reviews 
           } : null);
         }
       })
       .catch(() => {
-        console.warn("Supabase fetch timeout for product details, continuing with AI generation.");
+        console.warn("Supabase fetch timeout for product details.");
       });
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -188,7 +192,7 @@ export default function App() {
             </form>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {latestReviews.slice(0, 6).map((rev, i) => (
-                <div key={i} className="glass-card p-6 rounded-[40px] text-left cursor-pointer hover:-translate-y-2 transition-all shadow-xl" onClick={() => handleSearch(rev.product_name || '')}>
+                <div key={i} className="glass-card p-6 rounded-[40px] text-left cursor-pointer hover:-translate-y-2 transition-all shadow-xl" onClick={() => handleSearch(rev.product_name || '', rev.image_url || '')}>
                   <img src={rev.image_url || "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400"} className="w-full aspect-video object-cover rounded-[30px] mb-4 bg-white/50" alt={rev.product_name || "Product"} />
                   <h3 className="font-black text-lg italic uppercase truncate">{rev.product_name}</h3>
                   <div className="flex justify-between mt-4 opacity-60"><StarRating rating={rev.rating || 5} /> <i className="fas fa-arrow-right"></i></div>
@@ -203,13 +207,11 @@ export default function App() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
               <div className="lg:sticky lg:top-36 space-y-10">
                 <div className="w-full bg-white rounded-[50px] overflow-hidden shadow-2xl border-[10px] border-white group relative">
-                  {product.image_url ? (
-                    <img src={product.image_url} className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-700" alt={product.name} />
-                  ) : (
-                    <div className="aspect-square bg-slate-100 flex items-center justify-center">
-                      <i className="fas fa-image text-4xl text-slate-300"></i>
-                    </div>
-                  )}
+                  <img 
+                    src={product.image_url && product.image_url.startsWith('http') ? product.image_url : "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800"} 
+                    className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-700" 
+                    alt={product.name} 
+                  />
                   <div className="absolute top-6 right-6 bg-black text-white px-6 py-2 rounded-full font-black italic text-[10px] tracking-widest shadow-2xl uppercase">PRODUIT CERTIFIÉ</div>
                 </div>
 
