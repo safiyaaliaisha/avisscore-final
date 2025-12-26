@@ -1,4 +1,3 @@
-
 export interface Review {
   id?: string | null;
   product_id?: string | null;
@@ -55,17 +54,10 @@ export interface AIAnalysis {
   activeLifespanYears: number;
 }
 
-export interface ComparisonData {
-  summary: string;
-  winner: string;
-  criteria: {
-    label: string;
-    productA: string;
-    productB: string;
-    better: 'A' | 'B' | 'Equal';
-  }[];
-}
-
+/**
+ * Interface for product summaries used in the Summarizer component.
+ * Added to fix the import error in components/Summarizer.tsx.
+ */
 export interface ProductSummary {
   sentiment: string;
   summary: string;
