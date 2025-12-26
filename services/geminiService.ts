@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 
 export interface WebSource {
@@ -6,34 +7,30 @@ export interface WebSource {
 }
 
 /**
- * محرك البحث Turbo V9: يبحث في الإنترنت ويحلل المنتج
+ * TURBO ENGINE V9 (Powered by Gemini 3 Flash)
+ * محرك البحث فائق السرعة مع تصفح الويب المباشر
  */
 export const analyzeProductWithWebSearch = async (productName: string) => {
+  // استخدام API KEY من البيئة كما هو مطلوب
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  const prompt = `Analyse en profondeur le produit suivant: "${productName}". 
-  Recherche sur les sites tech majeurs (Amazon, Fnac, Boulanger, Darty, Rakuten).
-  Génère un rapport complet incluant:
-  1. Score global sur 100.
-  2. Description concise.
-  3. EXACTEMENT 6 points forts et 6 points faibles.
-  4. Le modèle précédent (predecessor).
-  5. Durée de vie estimée en années.
-  6. 2 alternatives avec leurs prix.
-  7. Un conseil d'achat punchy.
-
-  Réponds EXCLUSIVEMENT au format JSON strict:
+  const prompt = `TURBO MODE V9: Analyse IMMÉDIATE de "${productName}". 
+  SOURCES: Amazon, Fnac, Boulanger, Darty, Rakuten.
+  EXTRAIRE: Score/100, Pros (6), Cons (6), Prix actuel, Modèle précédent, Durée de vie.
+  
+  FORMAT JSON STRICT (FRANÇAIS):
   {
     "score": number,
-    "description": "string",
-    "pros": ["string"],
-    "cons": ["string"],
+    "description": "phrase courte",
+    "pros": ["p1","p2","p3","p4","p5","p6"],
+    "cons": ["c1","c2","c3","c4","c5","c6"],
     "predecessorName": "string",
     "activeLifespanYears": number,
     "marketAlternatives": [{"name": "string", "price": "string"}],
     "verdict": "string",
     "buyerTip": "string"
-  }`;
+  }
+  NO MARKDOWN. FAST RESPONSE ONLY.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -41,33 +38,28 @@ export const analyzeProductWithWebSearch = async (productName: string) => {
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
-        // ملاحظة: Grounding Metadata تتوفر بشكل أفضل عند عدم فرض JSON في الـ Config أحياناً، 
-        // لذا سنقوم باستخراج الـ JSON من النص يدوياً لضمان الحصول على الروابط.
+        temperature: 0.1, // أقصى سرعة وأقل عشوائية
+        thinkingConfig: { thinkingBudget: 0 } // تعطيل التفكير العميق لزيادة السرعة اللحظية
       },
     });
 
-    // استخراج الروابط (Sources) من Metadata
+    // استخراج الروابط والمصادر
     const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
     const sources: WebSource[] = groundingMetadata?.groundingChunks?.map((chunk: any) => ({
-      title: chunk.web?.title || "Source Tech",
+      title: chunk.web?.title || "Source Tech Directe",
       uri: chunk.web?.uri
     })).filter((s: any) => s.uri) || [];
 
-    // استخراج الـ JSON من النص
+    // استخراج JSON
     let data = null;
-    try {
-      const text = response.text;
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        data = JSON.parse(jsonMatch[0]);
-      }
-    } catch (e) {
-      console.error("JSON Parsing failed, using fallback text extraction", e);
+    const jsonMatch = response.text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      data = JSON.parse(jsonMatch[0]);
     }
 
     return { data, sources };
   } catch (error) {
-    console.error("Gemini Web Search Error:", error);
+    console.error("Turbo V9 Engine Error:", error);
     return { data: null, sources: [] };
   }
 };
