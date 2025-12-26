@@ -91,11 +91,10 @@ export default function App() {
     setProduct(initialProduct);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Supabase fetch with 4s timeout (The Charge fix)
-    withTimeout(fetchProductDataFromReviews(targetName), 4000)
+    // Supabase fetch (non-bloquant pour l'IA)
+    fetchProductDataFromReviews(targetName)
       .then(dbData => {
         if (dbData && dbData.reviews && dbData.reviews.length > 0) {
-          // Optimization: Search for the first review that actually has an actual image URL
           const reviewWithImage = dbData.reviews.find(r => r.image_url && r.image_url.trim().startsWith('http'));
           const bestImage = reviewWithImage ? reviewWithImage.image_url : (dbData.firstMatch?.image_url || initialImg);
           
@@ -106,25 +105,28 @@ export default function App() {
           } : null);
         }
       })
-      .catch(() => {
-        console.warn("Supabase fetch timeout for product details.");
+      .catch((err) => {
+        console.warn("Supabase fetch failed for product details:", err);
       });
 
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const fastPrompt = `STRICT JSON (TOUS LES TEXTES EN FRANÇAIS): {"score":number,"description":"phrase_courte_fr","pros":["p1","p2","p3","p4","p5","p6"],"cons":["c1","c2","c3","c4","c5","c6"],"predecessorName":"nom_fr","activeLifespanYears":number,"marketAlternatives":[{"name":"nom","price":"prix_approx_euro"}],"verdict":"verdict_fr","buyerTip":"conseil_achat_punchy_fr"} for "${targetName}". Génère exactement 6 points forts et 6 points faibles. NO MARKDOWN.`;
-
     try {
-      // AI generation with 4s timeout (The Charge fix)
+      // ALWAYS use process.env.API_KEY exclusively for the Google GenAI SDK.
+      // Do not use UI prompts or fallbacks for the API key.
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+      
+      const fastPrompt = `STRICT JSON (TOUS LES TEXTES EN FRANÇAIS): {"score":number,"description":"phrase_courte_fr","pros":["p1","p2","p3","p4","p5","p6"],"cons":["c1","c2","c3","c4","c5","c6"],"predecessorName":"nom_fr","activeLifespanYears":number,"marketAlternatives":[{"name":"nom","price":"prix_approx_euro"}],"verdict":"verdict_fr","buyerTip":"conseil_achat_punchy_fr"} for "${targetName}". Génère exactement 6 points forts et 6 points faibles. NO MARKDOWN.`;
+
+      // Perform the content generation with a timeout guard
       const res = await withTimeout(ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: fastPrompt,
         config: { 
           responseMimeType: "application/json",
-          thinkingConfig: { thinkingBudget: 0 },
           temperature: 0.1 
         }
       }), 4000);
 
+      // Directly access .text property from GenerateContentResponse
       const rawData = JSON.parse(res.text || "{}");
       setAiVerdict({
         ...DEFAULT_ANALYSIS,
@@ -134,7 +136,8 @@ export default function App() {
         marketAlternatives: Array.isArray(rawData.marketAlternatives) ? rawData.marketAlternatives : DEFAULT_ANALYSIS.marketAlternatives
       });
     } catch (e) {
-      console.warn("AI Turbo Error or Timeout, keeping DEFAULT_ANALYSIS with score 9.2");
+      console.error("AI Turbo Error or Timeout:", e);
+      // Fallback to defaults to maintain user experience
       setAiVerdict(DEFAULT_ANALYSIS);
     } finally {
       setIsSearching(false);
