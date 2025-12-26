@@ -26,6 +26,14 @@ const DEFAULT_ANALYSIS: AIAnalysis = {
   durabilityScore: 7
 };
 
+// Helper pour le timeout de 4 secondes
+const withTimeout = (promise: Promise<any>, ms: number) => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), ms))
+  ]);
+};
+
 const StarRating = ({ rating, size = "text-[12px]" }: { rating: number, size?: string }) => (
   <div className="flex items-center gap-1.5">
     <div className={`flex text-[#FFD700] gap-0.5 items-center ${size}`}>
@@ -53,14 +61,15 @@ export default function App() {
 
   const loadInitialData = async () => {
     try {
-      const [reviews, names] = await Promise.all([
+      // Timeout 4s pour le chargement initial
+      const [reviews, names] = await withTimeout(Promise.all([
         fetchLatestReviews(12),
         fetchUniqueProducts()
-      ]);
+      ]), 4000);
       setLatestReviews(reviews || []);
       setCompareList(names || []);
     } catch (e) {
-      console.error("Data load error", e);
+      console.warn("Initial load timeout or error, using defaults");
     }
   };
 
@@ -83,22 +92,27 @@ export default function App() {
     setProduct(initialProduct);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    fetchProductDataFromReviews(targetName).then(dbData => {
-      if (dbData?.firstMatch) {
-        setProduct(prev => prev ? { 
-          ...prev, 
-          image_url: dbData.firstMatch?.image_url || "", 
-          reviews: dbData.reviews 
-        } : null);
-      }
-    });
+    // Supabase fetch with 4s timeout
+    withTimeout(fetchProductDataFromReviews(targetName), 4000)
+      .then(dbData => {
+        if (dbData?.firstMatch) {
+          setProduct(prev => prev ? { 
+            ...prev, 
+            image_url: dbData.firstMatch?.image_url || "", 
+            reviews: dbData.reviews 
+          } : null);
+        }
+      })
+      .catch(() => {
+        console.warn("Supabase fetch timeout for product details");
+      });
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    
     const fastPrompt = `STRICT JSON (TOUS LES TEXTES EN FRANÇAIS): {"score":number,"description":"phrase_courte_fr","pros":["p1","p2","p3","p4","p5","p6"],"cons":["c1","c2","c3","c4","c5","c6"],"predecessorName":"nom_fr","activeLifespanYears":number,"marketAlternatives":[{"name":"nom","price":"prix_approx_euro"}],"verdict":"verdict_fr","buyerTip":"conseil_achat_punchy_fr"} for "${targetName}". Génère exactement 6 points forts et 6 points faibles. NO MARKDOWN.`;
 
     try {
-      const res = await ai.models.generateContent({
+      // AI generation with 4s timeout
+      const res = await withTimeout(ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: fastPrompt,
         config: { 
@@ -106,10 +120,9 @@ export default function App() {
           thinkingConfig: { thinkingBudget: 0 },
           temperature: 0.1 
         }
-      });
+      }), 4000);
 
       const rawData = JSON.parse(res.text || "{}");
-      
       setAiVerdict({
         ...DEFAULT_ANALYSIS,
         ...rawData,
@@ -118,7 +131,7 @@ export default function App() {
         marketAlternatives: Array.isArray(rawData.marketAlternatives) ? rawData.marketAlternatives : DEFAULT_ANALYSIS.marketAlternatives
       });
     } catch (e) {
-      console.error("AI Turbo Error", e);
+      console.warn("AI Turbo Error or Timeout, keeping defaults");
       setAiVerdict(DEFAULT_ANALYSIS);
     } finally {
       setIsSearching(false);
@@ -177,7 +190,7 @@ export default function App() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {latestReviews.slice(0, 6).map((rev, i) => (
                 <div key={i} className="glass-card p-6 rounded-[40px] text-left cursor-pointer hover:-translate-y-2 transition-all shadow-xl" onClick={() => handleSearch(rev.product_name || '')}>
-                  <img src={rev.image_url || "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400"} className="w-full aspect-video object-cover rounded-[30px] mb-4 bg-white/50" />
+                  <img src={rev.image_url || "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400"} className="w-full aspect-video object-cover rounded-[30px] mb-4 bg-white/50" alt={rev.product_name || "Product"} />
                   <h3 className="font-black text-lg italic uppercase truncate">{rev.product_name}</h3>
                   <div className="flex justify-between mt-4 opacity-60"><StarRating rating={rev.rating || 5} /> <i className="fas fa-arrow-right"></i></div>
                 </div>
@@ -202,7 +215,6 @@ export default function App() {
                 </div>
 
                 <div className="space-y-6">
-                  {/* SECTION ALTERNATIVES - DESIGN VIBRANT AVEC PRIX */}
                   <div className="relative group overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-[#1A237E] via-[#4A148C] to-[#880E4F] rounded-[40px]"></div>
                     <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 blur-3xl -mr-20 -mt-20 rounded-full"></div>
@@ -424,11 +436,11 @@ export default function App() {
                DUEL <span className="text-white/40">TECH.</span> <br/>COMPARATIF IA.
              </h2>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-20">
-                <select className="glass-card p-6 rounded-3xl font-black italic uppercase outline-none focus:ring-4 ring-[#4158D0]/20 cursor-pointer" value={compareA} onChange={(e) => setCompareA(e.target.value)}>
+                <select className="glass-card p-6 rounded-3xl font-black italic uppercase outline-none focus:ring-4 ring-[#4158D0]/20 cursor-pointer w-full" value={compareA} onChange={(e) => setCompareA(e.target.value)}>
                   <option value="">SÉLECTIONNER PRODUIT A</option>
                   {compareList.map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
-                <select className="glass-card p-6 rounded-3xl font-black italic uppercase outline-none focus:ring-4 ring-[#4158D0]/20 cursor-pointer" value={compareB} onChange={(e) => setCompareB(e.target.value)}>
+                <select className="glass-card p-6 rounded-3xl font-black italic uppercase outline-none focus:ring-4 ring-[#4158D0]/20 cursor-pointer w-full" value={compareB} onChange={(e) => setCompareB(e.target.value)}>
                   <option value="">SÉLECTIONNER PRODUIT B</option>
                   {compareList.map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
@@ -457,7 +469,7 @@ export default function App() {
         <div className="fixed bottom-10 right-10 z-[100] animate-bounce">
           <div className="bg-[#050A30] text-white px-10 py-5 rounded-full shadow-2xl flex items-center gap-5">
             <div className="w-6 h-6 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
-            <span className="text-[12px] font-black uppercase tracking-widest italic uppercase">V9 Turbo Processing...</span>
+            <span className="text-[12px] font-black uppercase tracking-widest italic">V9 Turbo Processing...</span>
           </div>
         </div>
       )}
