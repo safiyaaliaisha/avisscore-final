@@ -1,89 +1,62 @@
-
 import { supabase } from '../lib/supabaseClient';
 import { Review } from '../types';
 
 /**
- * جلب أحدث المراجعات مع معالجة الأخطاء لضمان استقرار التطبيق.
+ * Fetches the latest reviews directly from Supabase with selective columns for speed.
  */
 export const fetchLatestReviews = async (limit = 12): Promise<Review[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('my_reviews')
-      .select('id, product_name, rating, image_url, created_at')
-      .order('created_at', { ascending: false })
-      .limit(limit);
+  const { data, error } = await supabase
+    .from('my_reviews')
+    .select('id, product_name, rating, image_url, created_at')
+    .order('created_at', { ascending: false })
+    .limit(limit);
 
-    if (error) {
-      console.error("Supabase Error (fetchLatestReviews):", error);
-      return [];
-    }
-    
-    // Ajout d'un nom d'auteur par défaut car la colonne n'existe pas en DB
-    return ((data as any[]) || []).map(r => ({
-      ...r,
-      author_name: "Utilisateur vérifié"
-    })) as Review[];
-  } catch (err) {
-    console.error("Critical failure in fetchLatestReviews:", err);
+  if (error) {
+    console.error("Supabase Error (fetchLatestReviews):", error);
     return [];
   }
+  return (data as Review[]) || [];
 };
 
 /**
- * جلب أسماء المنتجات الفريدة مع الحماية من الأخطاء.
+ * Fetches unique product names for comparison, limited to reduce data transfer.
  */
 export const fetchUniqueProducts = async (): Promise<string[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('my_reviews')
-      .select('product_name')
-      .limit(500); 
+  const { data, error } = await supabase
+    .from('my_reviews')
+    .select('product_name')
+    .limit(500); 
 
-    if (error) {
-      console.error("Supabase Error (fetchUniqueProducts):", error);
-      return [];
-    }
-    
-    const names: string[] = ((data as any[]) || [])
-      .map(d => d.product_name)
-      .filter((name): name is string => typeof name === 'string' && name.length > 0);
-      
-    return Array.from(new Set(names)).sort();
-  } catch (err) {
-    console.error("Critical failure in fetchUniqueProducts:", err);
+  if (error) {
+    console.error("Supabase Error (fetchUniqueProducts):", error);
     return [];
   }
+  
+  const names: string[] = ((data as any[]) || [])
+    .map(d => d.product_name)
+    .filter((name): name is string => typeof name === 'string' && name.length > 0);
+    
+  return Array.from(new Set(names)).sort();
 };
 
 /**
- * جلب بيانات المنتج ومراجعاته من جدول 'my_reviews' مع الحماية القصوى من أخطاء الـ API.
- * تم حذف author_name من الاستعلام لتجنب خطأ 400.
+ * Fetches product data and its reviews from 'my_reviews' table by product name.
+ * Uses selective columns for faster fetching.
  */
 export const fetchProductDataFromReviews = async (name: string): Promise<{ reviews: Review[], firstMatch: Review | null }> => {
-  try {
-    const { data, error } = await supabase
-      .from('my_reviews')
-      .select('id, product_name, rating, review_text, created_at, source, image_url')
-      .ilike('product_name', `%${name}%`)
-      .limit(10); 
+  const { data, error } = await supabase
+    .from('my_reviews')
+    .select('id, product_name, rating, review_text, author_name, created_at, source, image_url')
+    .ilike('product_name', `%${name}%`)
+    .limit(10); 
 
-    if (error) {
-      console.error("Supabase Error (fetchProductDataFromReviews):", error);
-      return { reviews: [], firstMatch: null };
-    }
-
-    // Mapping pour injecter un nom d'auteur par défaut et éviter les erreurs UI
-    const reviewsWithFallback = ((data as any[]) || []).map(r => ({
-      ...r,
-      author_name: "Avis vérifié"
-    })) as Review[];
-    
-    return { 
-      reviews: reviewsWithFallback, 
-      firstMatch: reviewsWithFallback.length > 0 ? reviewsWithFallback[0] : null 
-    };
-  } catch (err) {
-    console.error("Critical failure in fetchProductDataFromReviews:", err);
+  if (error) {
+    console.error("Supabase Error (fetchProductDataFromReviews):", error);
     return { reviews: [], firstMatch: null };
   }
+  
+  return { 
+    reviews: (data as Review[]) || [], 
+    firstMatch: data && data.length > 0 ? (data[0] as Review) : null 
+  };
 }
