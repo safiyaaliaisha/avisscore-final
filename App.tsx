@@ -175,17 +175,18 @@ export default function App() {
           <section className="pb-40 max-w-[1400px] mx-auto px-6 pt-20 animate-fade-in">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-20">
               <div className="lg:sticky lg:top-36 space-y-10">
-                <div className="w-full bg-white rounded-[50px] overflow-hidden shadow-2xl border-[10px] border-white">
+                <div className="w-full bg-white rounded-[50px] overflow-hidden shadow-2xl border-[10px] border-white group relative">
                   {product.image_url ? (
-                    <img src={product.image_url} className="w-full aspect-square object-cover" alt={product.name} />
+                    <img src={product.image_url} className="w-full aspect-square object-cover group-hover:scale-105 transition-transform duration-700" alt={product.name} />
                   ) : (
                     <div className="aspect-square bg-slate-100 flex items-center justify-center">
                       <i className="fas fa-image text-4xl text-slate-300"></i>
                     </div>
                   )}
+                  <div className="absolute top-6 right-6 bg-black text-white px-6 py-2 rounded-full font-black italic text-[10px] tracking-widest shadow-2xl uppercase">PRODUIT CERTIFIÉ</div>
                 </div>
 
-                {/* Section Alternatives déplacée ici */}
+                {/* Section Alternatives */}
                 <div className="p-10 bg-black text-white rounded-[40px] shadow-2xl">
                   <h4 className="text-[10px] font-black uppercase tracking-[0.3em] mb-8 opacity-40 text-center">ALTERNATIVES MARCHÉ</h4>
                   <div className="grid grid-cols-1 gap-4">
@@ -200,59 +201,89 @@ export default function App() {
               </div>
               
               <div className="flex flex-col">
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40 mb-4 italic">Vitesse de réponse optimisée v9.2</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40 mb-4 italic">Moteur de calcul V9 Turbo</span>
                 <h2 className="text-5xl md:text-7xl font-black italic uppercase tracking-tighter mb-10 leading-none">{product.name}</h2>
                 
-                <div className="glass-card p-8 rounded-[40px] flex items-center justify-between mb-10 shadow-2xl border-white">
-                   <div className="flex items-center gap-6">
-                      <div className="text-6xl font-black italic">{((aiVerdict?.score || 80) / 10).toFixed(1)}</div>
-                      <div className="h-12 w-[2px] bg-black/10"></div>
+                <div className="glass-card p-8 rounded-[40px] flex items-center justify-between mb-12 shadow-2xl border-white relative overflow-hidden">
+                   <div className="absolute -right-10 -top-10 w-40 h-40 bg-[#4158D0]/10 rounded-full blur-3xl"></div>
+                   <div className="flex items-center gap-6 relative z-10">
+                      <div className="text-7xl font-black italic bg-gradient-to-br from-[#050A30] to-[#4158D0] bg-clip-text text-transparent">
+                        {((aiVerdict?.score || 80) / 10).toFixed(1)}
+                      </div>
+                      <div className="h-16 w-[2px] bg-black/10"></div>
                       <div>
-                        <StarRating rating={(aiVerdict?.score || 80) / 20} size="text-[20px]" />
-                        <span className="text-[9px] font-bold opacity-30 uppercase tracking-widest block mt-1">SCORE CALCULÉ PAR IA</span>
+                        <StarRating rating={(aiVerdict?.score || 80) / 20} size="text-[24px]" />
+                        <span className="text-[9px] font-black opacity-30 uppercase tracking-[0.2em] block mt-2 italic">INDICE DE CONFIANCE IA</span>
                       </div>
                    </div>
-                   <div className="text-right">
-                     <span className="text-xl font-black italic text-[#4158D0] uppercase">
+                   <div className="text-right relative z-10">
+                     <span className="text-2xl font-black italic text-[#4158D0] uppercase tracking-tighter">
                        {aiVerdict?.verdict || "Analyse..."}
                      </span>
                    </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-                  <div className="bg-emerald-500/10 p-8 rounded-[35px] border border-emerald-500/20">
-                    <h4 className="text-[10px] font-black uppercase text-emerald-600 mb-6 italic">POINTS FORTS</h4>
-                    {(aiVerdict?.pros || []).map((p, i) => (
-                      <p key={i} className="text-sm font-bold mb-3 flex gap-3 text-emerald-900/80">
-                        <i className="fas fa-check-circle mt-0.5 opacity-40"></i> {p}
-                      </p>
-                    ))}
+                {/* NOUVELLE SECTION POINTS FORTS / FAIBLES STYLISÉE */}
+                <div className="grid grid-cols-1 gap-8 mb-12">
+                  <div className="relative group">
+                    <div className="absolute -inset-1 bg-emerald-500 rounded-[45px] blur opacity-10 group-hover:opacity-20 transition duration-500"></div>
+                    <div className="relative glass-card border-l-8 border-emerald-500 p-8 rounded-[40px] shadow-lg">
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-emerald-500/30">
+                          <i className="fas fa-thumbs-up"></i>
+                        </div>
+                        <h4 className="text-[12px] font-black uppercase tracking-widest text-emerald-600 italic">POINTS FORTS</h4>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {(aiVerdict?.pros || []).map((p, i) => (
+                          <div key={i} className="flex items-center gap-4 bg-white/40 p-4 rounded-2xl border border-white hover:bg-emerald-50 transition-colors">
+                            <i className="fas fa-check-circle text-emerald-500 text-sm opacity-60"></i>
+                            <span className="text-sm font-bold uppercase italic tracking-tight opacity-80">{p}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <div className="bg-rose-500/10 p-8 rounded-[35px] border border-rose-500/20">
-                    <h4 className="text-[10px] font-black uppercase text-rose-600 mb-6 italic">POINTS FAIBLES</h4>
-                    {(aiVerdict?.cons || []).map((c, i) => (
-                      <p key={i} className="text-sm font-bold mb-3 flex gap-3 text-rose-900/80">
-                        <i className="fas fa-times-circle mt-0.5 opacity-40"></i> {c}
-                      </p>
-                    ))}
+
+                  <div className="relative group">
+                    <div className="absolute -inset-1 bg-rose-500 rounded-[45px] blur opacity-10 group-hover:opacity-20 transition duration-500"></div>
+                    <div className="relative glass-card border-l-8 border-rose-500 p-8 rounded-[40px] shadow-lg">
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="w-10 h-10 bg-rose-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-rose-500/30">
+                          <i className="fas fa-thumbs-down"></i>
+                        </div>
+                        <h4 className="text-[12px] font-black uppercase tracking-widest text-rose-600 italic">POINTS FAIBLES</h4>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {(aiVerdict?.cons || []).map((c, i) => (
+                          <div key={i} className="flex items-center gap-4 bg-white/40 p-4 rounded-2xl border border-white hover:bg-rose-50 transition-colors">
+                            <i className="fas fa-exclamation-triangle text-rose-500 text-sm opacity-60"></i>
+                            <span className="text-sm font-bold uppercase italic tracking-tight opacity-80">{c}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6 mb-10">
-                  <div className="bg-white/40 p-8 rounded-[35px] border border-white shadow-sm">
-                    <span className="text-[9px] font-black opacity-30 block mb-1 uppercase tracking-widest">PRÉDÉCESSEUR</span>
-                    <p className="text-xl font-black italic truncate">{aiVerdict?.predecessorName || "N/A"}</p>
+                <div className="grid grid-cols-2 gap-6 mb-12">
+                  <div className="bg-white/40 p-8 rounded-[35px] border border-white shadow-sm flex flex-col justify-center">
+                    <span className="text-[9px] font-black opacity-30 block mb-1 uppercase tracking-widest italic">VERSION PRÉCÉDENTE</span>
+                    <p className="text-2xl font-black italic truncate text-[#050A30] uppercase tracking-tighter">{aiVerdict?.predecessorName || "N/A"}</p>
                   </div>
-                  <div className="bg-white/40 p-8 rounded-[35px] border border-white shadow-sm">
-                    <span className="text-[9px] font-black opacity-30 block mb-1 uppercase tracking-widest">CYCLE DE VIE</span>
-                    <p className="text-xl font-black italic text-[#4158D0]">{aiVerdict?.activeLifespanYears || 3} ANS</p>
+                  <div className="bg-[#4158D0] p-8 rounded-[35px] shadow-2xl flex flex-col justify-center text-white">
+                    <span className="text-[9px] font-black opacity-40 block mb-1 uppercase tracking-widest italic">VALEUR RÉSIDUELLE</span>
+                    <p className="text-2xl font-black italic uppercase tracking-tighter">{aiVerdict?.activeLifespanYears || 3} ANS DE VIE</p>
                   </div>
                 </div>
 
-                <div className="p-10 glass-card rounded-[40px] mb-10 shadow-lg border-white relative">
-                  <h4 className="text-[10px] font-black opacity-30 uppercase mb-4 italic">SYNTHÈSE TECHNIQUE</h4>
-                  <p className="text-lg font-medium italic opacity-80 leading-relaxed italic">
-                    "{aiVerdict?.description || "Analyse Turbo en cours..."}"
+                <div className="p-10 glass-card rounded-[40px] mb-10 shadow-lg border-white relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                     <i className="fas fa-quote-right text-6xl"></i>
+                  </div>
+                  <h4 className="text-[10px] font-black opacity-30 uppercase mb-4 italic tracking-widest">SYNTHÈSE TECHNIQUE</h4>
+                  <p className="text-xl font-bold italic opacity-90 leading-relaxed">
+                    "{aiVerdict?.description || "Le moteur d'analyse termine de compiler les données..."}"
                   </p>
                 </div>
               </div>
@@ -262,20 +293,22 @@ export default function App() {
 
         {view === 'compare' && (
           <section className="py-24 px-6 max-w-[1000px] mx-auto animate-fade-in">
-             <h2 className="text-5xl font-black italic uppercase text-center mb-16 tracking-tighter">DUEL <span className="text-white/40">V9.</span></h2>
+             <h2 className="text-5xl font-black italic uppercase text-center mb-16 tracking-tighter leading-none">
+               DUEL <span className="text-white/40">TECH.</span> <br/>COMPARATIF IA.
+             </h2>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-20">
-                <select className="glass-card p-6 rounded-3xl font-black italic uppercase outline-none focus:ring-4 ring-[#4158D0]/20" value={compareA} onChange={(e) => setCompareA(e.target.value)}>
-                  <option value="">PRODUIT A</option>
+                <select className="glass-card p-6 rounded-3xl font-black italic uppercase outline-none focus:ring-4 ring-[#4158D0]/20 cursor-pointer" value={compareA} onChange={(e) => setCompareA(e.target.value)}>
+                  <option value="">SÉLECTIONNER PRODUIT A</option>
                   {compareList.map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
-                <select className="glass-card p-6 rounded-3xl font-black italic uppercase outline-none focus:ring-4 ring-[#4158D0]/20" value={compareB} onChange={(e) => setCompareB(e.target.value)}>
-                  <option value="">PRODUIT B</option>
+                <select className="glass-card p-6 rounded-3xl font-black italic uppercase outline-none focus:ring-4 ring-[#4158D0]/20 cursor-pointer" value={compareB} onChange={(e) => setCompareB(e.target.value)}>
+                  <option value="">SÉLECTIONNER PRODUIT B</option>
                   {compareList.map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
              </div>
              {compareA && compareB && (
                <div className="text-center">
-                 <button onClick={() => handleSearch(compareA)} className="bg-black text-white px-12 py-5 rounded-full font-black uppercase shadow-2xl hover:scale-105 transition-all">LANCER LE DUEL</button>
+                 <button onClick={() => handleSearch(compareA)} className="bg-black text-white px-16 py-6 rounded-full font-black uppercase shadow-2xl hover:scale-105 active:scale-95 transition-all tracking-widest italic">LANCER LE COMPARATIF</button>
                </div>
              )}
           </section>
@@ -293,16 +326,17 @@ export default function App() {
         )}
       </main>
 
-      <footer className="py-20 glass-card !rounded-none !border-0 text-center shadow-inner mt-20">
-         <span className="text-4xl font-black italic uppercase tracking-tighter">Avis<span className="text-[#4158D0]">Score</span></span>
-         <p className="text-[10px] font-black uppercase tracking-[0.5em] opacity-20 italic mt-8">© 2025 — ENGINE V9.2 TURBO</p>
+      <footer className="py-24 glass-card !rounded-none !border-0 text-center shadow-inner mt-20 relative overflow-hidden">
+         <div className="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent"></div>
+         <span className="text-4xl font-black italic uppercase tracking-tighter relative z-10">Avis<span className="text-[#4158D0]">Score</span></span>
+         <p className="text-[10px] font-black uppercase tracking-[0.5em] opacity-20 italic mt-8 relative z-10">© 2025 — ENGINE V9.2 TURBO — TOUS DROITS RÉSERVÉS</p>
       </footer>
 
       {isSearching && (
         <div className="fixed bottom-10 right-10 z-[100] animate-bounce">
-          <div className="bg-[#050A30] text-white px-8 py-4 rounded-full shadow-2xl flex items-center gap-4">
-            <div className="w-5 h-5 border-3 border-white/20 border-t-white rounded-full animate-spin"></div>
-            <span className="text-[11px] font-black uppercase tracking-widest italic">V9 Engine Processing...</span>
+          <div className="bg-[#050A30] text-white px-10 py-5 rounded-full shadow-2xl flex items-center gap-5">
+            <div className="w-6 h-6 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
+            <span className="text-[12px] font-black uppercase tracking-widest italic">V9 Turbo Processing...</span>
           </div>
         </div>
       )}
