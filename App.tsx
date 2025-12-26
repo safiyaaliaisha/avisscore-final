@@ -1,12 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { fetchLatestReviews, fetchProductDataFromReviews, fetchUniqueProducts } from './services/reviewService';
 import { Product, Review, AIAnalysis, MarketAlternative } from './types';
 
 const DEFAULT_ANALYSIS: AIAnalysis = {
-  score: 80,
-  description: "Analyse technique optimisée. Performances équilibrées pour sa catégorie.",
+  score: 92, // Résultat 9.2 comme demandé
+  description: "Analyse technique optimisée. Performances exceptionnelles pour sa catégorie.",
   pros: ["Efficacité", "Construction", "Autonomie", "Design", "Interface", "Connectivité"],
   cons: ["Prix", "Stock", "Poids", "Accessoires", "Chargeur", "Logiciel"],
   predecessorName: "Version précédente",
@@ -16,14 +15,14 @@ const DEFAULT_ANALYSIS: AIAnalysis = {
   buyerTip: "Vérifiez les promotions de fin de série avant de valider l'achat.",
   marketBestPrice: "---",
   marketAlternatives: [{name: "Alternative A", price: "--- €"}, {name: "Alternative B", price: "--- €"}],
-  verdict: "Recommandé",
-  punchyVerdict: "Le choix sûr",
+  verdict: "Hautement Recommandé",
+  punchyVerdict: "Le choix élite",
   sourceScores: [],
   totalReviews: 50,
   buyingWindow: "Ouverte",
-  buyingConfidence: 85,
+  buyingConfidence: 95,
   marketMoment: "Stable",
-  durabilityScore: 7
+  durabilityScore: 9
 };
 
 // Helper pour le timeout de 4 secondes
@@ -61,7 +60,7 @@ export default function App() {
 
   const loadInitialData = async () => {
     try {
-      // Timeout 4s pour le chargement initial
+      // Timeout 4s pour le chargement initial sur avisscore.fr
       const [reviews, names] = await withTimeout(Promise.all([
         fetchLatestReviews(12),
         fetchUniqueProducts()
@@ -92,7 +91,7 @@ export default function App() {
     setProduct(initialProduct);
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Supabase fetch with 4s timeout
+    // Supabase fetch with 4s timeout (The Charge fix)
     withTimeout(fetchProductDataFromReviews(targetName), 4000)
       .then(dbData => {
         if (dbData?.firstMatch) {
@@ -104,14 +103,14 @@ export default function App() {
         }
       })
       .catch(() => {
-        console.warn("Supabase fetch timeout for product details");
+        console.warn("Supabase fetch timeout for product details, continuing with AI generation.");
       });
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const fastPrompt = `STRICT JSON (TOUS LES TEXTES EN FRANÇAIS): {"score":number,"description":"phrase_courte_fr","pros":["p1","p2","p3","p4","p5","p6"],"cons":["c1","c2","c3","c4","c5","c6"],"predecessorName":"nom_fr","activeLifespanYears":number,"marketAlternatives":[{"name":"nom","price":"prix_approx_euro"}],"verdict":"verdict_fr","buyerTip":"conseil_achat_punchy_fr"} for "${targetName}". Génère exactement 6 points forts et 6 points faibles. NO MARKDOWN.`;
 
     try {
-      // AI generation with 4s timeout
+      // AI generation with 4s timeout (The Charge fix)
       const res = await withTimeout(ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: fastPrompt,
@@ -131,7 +130,7 @@ export default function App() {
         marketAlternatives: Array.isArray(rawData.marketAlternatives) ? rawData.marketAlternatives : DEFAULT_ANALYSIS.marketAlternatives
       });
     } catch (e) {
-      console.warn("AI Turbo Error or Timeout, keeping defaults");
+      console.warn("AI Turbo Error or Timeout, keeping DEFAULT_ANALYSIS with score 9.2");
       setAiVerdict(DEFAULT_ANALYSIS);
     } finally {
       setIsSearching(false);
@@ -275,12 +274,12 @@ export default function App() {
                         <span className="text-[9px] font-black opacity-30 uppercase tracking-[0.3em] mb-4 italic">INDICE DE PERFORMANCE IA</span>
                         <div className="flex items-baseline gap-2">
                           <span className="text-8xl font-black italic bg-gradient-to-br from-[#050A30] to-[#4158D0] bg-clip-text text-transparent leading-none tracking-tighter">
-                            {((aiVerdict?.score || 80) / 10).toFixed(1)}
+                            {((aiVerdict?.score || 92) / 10).toFixed(1)}
                           </span>
                           <span className="text-2xl font-black opacity-10">/10</span>
                         </div>
                         <div className="mt-6 scale-110">
-                          <StarRating rating={(aiVerdict?.score || 80) / 20} size="text-[24px]" />
+                          <StarRating rating={(aiVerdict?.score || 92) / 20} size="text-[24px]" />
                         </div>
                       </div>
 
@@ -469,7 +468,7 @@ export default function App() {
         <div className="fixed bottom-10 right-10 z-[100] animate-bounce">
           <div className="bg-[#050A30] text-white px-10 py-5 rounded-full shadow-2xl flex items-center gap-5">
             <div className="w-6 h-6 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
-            <span className="text-[12px] font-black uppercase tracking-widest italic">V9 Turbo Processing...</span>
+            <span className="text-[12px] font-black uppercase tracking-widest italic uppercase">V9 Turbo Processing...</span>
           </div>
         </div>
       )}

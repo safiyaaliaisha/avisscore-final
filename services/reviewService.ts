@@ -32,7 +32,6 @@ export const fetchUniqueProducts = async (): Promise<string[]> => {
     return [];
   }
   
-  // Fixed: explicitly type the map input and result to avoid 'unknown' errors
   const names: string[] = ((data as any[]) || [])
     .map(d => d.product_name)
     .filter((name): name is string => typeof name === 'string' && name.length > 0);
@@ -49,7 +48,7 @@ export const fetchProductDataFromReviews = async (name: string): Promise<{ revie
     .from('my_reviews')
     .select('id, product_name, rating, review_text, author_name, created_at, source, image_url')
     .ilike('product_name', `%${name}%`)
-    .limit(20); // Optimization: Limit total reviews per product to keep UI snappy
+    .limit(10); // Optimization: Strict limit for maximum speed
 
   if (error) {
     console.error("Supabase Error (fetchProductDataFromReviews):", error);
