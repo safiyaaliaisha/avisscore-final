@@ -28,6 +28,11 @@ export interface Product {
   reviews?: Review[];
 }
 
+export interface MarketAlternative {
+  name: string;
+  price: string;
+}
+
 export interface AIAnalysis {
   verdict: string;
   punchyVerdict: string;
@@ -41,7 +46,7 @@ export interface AIAnalysis {
   buyingConfidence: number;
   marketMoment: string;
   marketBestPrice: string;
-  marketAlternatives: string[];
+  marketAlternatives: MarketAlternative[];
   durabilityScore: number;
   trustStatement: string;
   oneWordVerdict: string;
