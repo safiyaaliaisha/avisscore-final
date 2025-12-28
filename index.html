@@ -3,53 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AvisScore - Moteur de Recherche IA Smartphones & Tech</title>
-  <meta name="description" content="Découvrez l'avis instantané sur les derniers smartphones avec le moteur Turbo V9 d'AvisScore.">
+  <title>Avisscore - Avis d'Experts Tech & Notes</title>
+  <meta name="description" content="Découvrez des avis professionnels et des notes de la communauté sur Avisscore. Le hub ultime pour l'électronique.">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     body { 
       font-family: 'Plus Jakarta Sans', sans-serif; 
-      background: linear-gradient(135deg, #4158D0 0%, #C850C0 46%, #FFCC70 100%);
-      background-attachment: fixed;
-      color: #050A30;
-      line-height: 1.6;
+      background-color: #F8FAFC;
+      color: #0F172A;
       margin: 0;
       padding: 0;
     }
-    .bg-mesh {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: -1;
-      background: 
-        radial-gradient(at 0% 0%, rgba(65, 88, 208, 0.4) 0px, transparent 50%),
-        radial-gradient(at 50% 0%, rgba(200, 80, 192, 0.4) 0px, transparent 50%),
-        radial-gradient(at 100% 0%, rgba(255, 204, 112, 0.4) 0px, transparent 50%);
-    }
-    .glass-card {
-      background: rgba(255, 255, 255, 0.35);
-      backdrop-filter: blur(40px);
-      -webkit-backdrop-filter: blur(40px);
-      border: 1.5px solid rgba(255, 255, 255, 0.6);
-      box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.5), 0 12px 40px 0 rgba(0, 0, 0, 0.1);
-    }
     ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(5, 10, 48, 0.2); border-radius: 10px; }
-    
-    @keyframes fade-in {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .animate-fade-in {
-      animation: fade-in 0.6s ease-out forwards;
-    }
+    ::-webkit-scrollbar-track { background: #F1F5F9; }
+    ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
   </style>
   <script type="importmap">
 {
@@ -66,7 +37,6 @@
 </script>
 </head>
 <body>
-  <div class="bg-mesh"></div>
   <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>

@@ -1,74 +1,48 @@
 
 export interface Review {
-  id?: string | null;
-  product_id?: string | null;
-  product_name?: string | null;
-  rating?: number | null;
-  review_text?: string | null;
-  author_name?: string | null;
-  created_at?: string | null;
-  source?: string | null;
-  image_url?: string | null;
+  id: string;
+  product_id: string;
+  rating: number;
+  review_text: string;
+  author_name: string;
+  created_at: string;
+  source?: string;
+}
+
+export interface Analysis {
+  id: string;
+  product_id: string;
+  score: number;
+  description: string;
+  points_forts: string[];
+  points_faibles: string[];
+  conseil_achat?: string;
+  duree_vie_estimee?: number;
+  version_precedente?: string;
 }
 
 export interface Product {
   id: string;
   name: string;
   description: string;
-  price: number;
-  category: string;
-  image_url?: string;
+  image_url: string;
+  price?: number;
+  category?: string;
   created_at?: string;
-  specs?: {
-    battery?: string;
-    camera?: string;
-    screen?: string;
-    processor?: string;
-  };
   reviews?: Review[];
-}
-
-export interface MarketAlternative {
-  name: string;
-  price: string;
-}
-
-export interface AIAnalysis {
-  verdict: string;
-  punchyVerdict: string;
-  pros: string[];
-  cons: string[];
-  score: number;
-  description: string;
-  sourceScores: { site: string; score: number }[];
-  totalReviews: number;
-  buyingWindow: string;
-  buyingConfidence: number;
-  marketMoment: string;
-  marketBestPrice: string;
-  marketAlternatives: MarketAlternative[];
-  durabilityScore: number;
-  trustStatement: string;
-  oneWordVerdict: string;
-  buyerTip: string;
-  predecessorName: string;
-  activeLifespanYears: number;
-}
-
-export interface ComparisonData {
-  summary: string;
-  winner: string;
-  criteria: {
-    label: string;
-    productA: string;
-    productB: string;
-    better: 'A' | 'B' | 'Equal';
-  }[];
+  analysis?: Analysis;
 }
 
 export interface ProductSummary {
+  rating: number;
   sentiment: string;
-  summary: string;
-  pros: string[];
-  cons: string[];
+  review_text: string[]; // Tableau de 4 chaînes
+  cycle_de_vie: string[]; // Tableau de 4 chaînes
+  points_forts: string[]; // Tableau de 4 chaînes
+  points_faibles: string[]; // Tableau de 2 à 4 chaînes
+  fiche_technique: string[]; // Tableau de 4 à 6 chaînes
+  alternative: string;
+  image_url: string;
+  seo_title: string;
+  seo_description: string;
 }

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Review } from '../types';
 
@@ -21,7 +20,7 @@ export const ReviewList: React.FC<ReviewListProps> = ({ reviews }) => {
     return (
       <div className="py-12 text-center text-slate-400">
         <i className="far fa-comment-dots text-4xl mb-3 block"></i>
-        <p>No reviews yet for this product.</p>
+        <p>Aucun avis pour ce produit pour le moment.</p>
       </div>
     );
   }
@@ -36,11 +35,10 @@ export const ReviewList: React.FC<ReviewListProps> = ({ reviews }) => {
               <StarRating rating={review.rating} />
             </div>
             <span className="text-[10px] text-slate-400 font-medium bg-slate-50 px-2 py-1 rounded">
-              {new Date(review.created_at).toLocaleDateString()}
+              {new Date(review.created_at).toLocaleDateString('fr-FR')}
             </span>
           </div>
           <p className="text-slate-600 text-sm leading-relaxed">
-            {/* Changed review.content to review.review_text to match Review interface */}
             {review.review_text}
           </p>
         </div>

@@ -1,5 +1,5 @@
 {
-  "name": "SuparaReview Pro",
-  "description": "A high-performance product review platform management interface. Features deep Supabase integration, real-time product data fetching, and AI-powered review sentiment analysis using Gemini.",
+  "name": "Avisscore Pro",
+  "description": "Une plateforme de gestion d'avis produits haute performance. Intégration Supabase, récupération de données en temps réel et analyse de sentiment par IA avec Gemini.",
   "requestFramePermissions": []
 }

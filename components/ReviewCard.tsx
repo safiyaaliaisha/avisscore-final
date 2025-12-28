@@ -1,48 +1,56 @@
-
 import React from 'react';
 import { Review } from '../types';
 
 interface ReviewCardProps {
   review: Review;
+  productName?: string;
 }
 
-const getSourceColor = (source?: string) => {
-  switch (source) {
-    case 'Amazon': return 'text-orange-500';
-    case 'Fnac': return 'text-amber-400';
-    case 'Rakuten': return 'text-red-600';
-    case 'Boulanger': return 'text-orange-600';
-    case 'Darty': return 'text-red-700 font-bold';
-    default: return 'text-slate-400';
-  }
-};
-
-export const ReviewCard: React.FC<ReviewCardProps> = ({ review }) => {
+export const ReviewCard: React.FC<ReviewCardProps> = ({ review, productName }) => {
   return (
-    <div className="bg-white p-8 border border-slate-100 hover:border-[#002395] transition-all duration-300 group">
-      <div className="flex justify-between items-start mb-6">
-        <div>
-          <div className="flex gap-0.5 mb-2">
-            {[...Array(5)].map((_, i) => (
-              <i key={i} className={`${i < review.rating ? 'fas' : 'far'} fa-star text-[10px] ${i < review.rating ? 'text-[#002395]' : 'text-slate-200'}`}></i>
-            ))}
-          </div>
-          <h4 className="text-xs font-bold uppercase tracking-widest text-slate-900">{review.author_name}</h4>
+    <div style={{
+      background: 'white',
+      borderRadius: '12px',
+      padding: '24px',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+      border: '1px solid #E2E8F0',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '12px'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          backgroundColor: '#94A3B8',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'white'
+        }}>
+          <i className="fas fa-user text-lg"></i>
         </div>
-        <div className="text-right">
-          <span className={`text-[9px] font-black uppercase tracking-tighter ${getSourceColor(review.source)}`}>
-            {review.source || 'Avis vérifié'}
-          </span>
-          <p className="text-[10px] text-slate-400 mt-1">{new Date(review.created_at).toLocaleDateString('fr-FR')}</p>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: '14px', color: '#1E293B' }}>{review.author_name}</div>
+          <div style={{ fontSize: '12px', color: '#64748B' }}>Il y a quelques heures</div>
         </div>
       </div>
       
-      <div className="relative">
-        <i className="fas fa-quote-left absolute -left-4 -top-2 text-slate-50 opacity-0 group-hover:opacity-100 transition-opacity"></i>
-        <p className="text-slate-600 text-sm leading-relaxed italic">
-          {/* Changed review.content to review.review_text to match Review interface */}
-          "{review.review_text}"
+      <div>
+        <div style={{ fontWeight: 700, fontSize: '15px', color: '#0F172A', marginBottom: '4px' }}>{productName || 'Produit'}</div>
+        <p style={{ fontSize: '13px', color: '#475569', lineHeight: '1.6', margin: 0 }}>
+          {review.review_text.length > 120 ? review.review_text.substring(0, 120) + '...' : review.review_text}
         </p>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div style={{ display: 'flex', color: '#F59E0B', fontSize: '12px' }}>
+          {[...Array(5)].map((_, i) => (
+            <i key={i} className={i < review.rating ? "fas fa-star" : "far fa-star"}></i>
+          ))}
+        </div>
+        <span style={{ fontSize: '12px', fontWeight: 600, color: '#475569', marginLeft: '4px' }}>{review.rating}</span>
       </div>
     </div>
   );
