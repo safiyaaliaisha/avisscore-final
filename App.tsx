@@ -1,8 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { fetchFullProductData, fetchHomeProducts, fetchRecentReviews } from './services/productService';
-import { getAIReviewSummary } from './services/geminiService';
-import { Product, ProductSummary, Review } from './types';
+import { Product, ProductSummary } from './types';
 import { ReviewCard } from './components/ReviewCard';
 import { LegalPage } from './components/LegalPages';
 import { FeaturePage } from './components/FeaturePages';
@@ -25,9 +25,8 @@ export default function App() {
   const [popularProducts, setPopularProducts] = useState<Product[]>([]);
   const [recentReviews, setRecentReviews] = useState<any[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [aiSummary, setAiSummary] = useState<ProductSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadHomeData();
@@ -35,6 +34,7 @@ export default function App() {
 
   const loadHomeData = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const [prods, revs] = await Promise.all([
         fetchHomeProducts(6),
@@ -44,6 +44,7 @@ export default function App() {
       setRecentReviews(Array.isArray(revs) ? revs : []);
     } catch (e) {
       console.error(e);
+      setError("Erreur de chargement");
       setPopularProducts([]);
       setRecentReviews([]);
     } finally {
@@ -54,28 +55,20 @@ export default function App() {
   const handleSearch = async (target: string, isId: boolean = false) => {
     if (!target.trim()) return;
     setIsLoading(true);
+    setError(null);
     setView('detail');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     try {
       const { data, error } = await fetchFullProductData(target, isId);
       if (data) {
         setSelectedProduct(data);
-        if (Array.isArray(data.reviews) && data.reviews.length > 0) {
-          setIsAnalyzing(true);
-          const summary = await getAIReviewSummary(data.name, data.reviews);
-          setAiSummary(summary);
-          setIsAnalyzing(false);
-        } else {
-          setAiSummary(null);
-        }
       } else {
         setSelectedProduct(null);
-        setAiSummary(null);
       }
     } catch (e) {
       console.error(e);
+      setError("Produit introuvable");
       setSelectedProduct(null);
-      setAiSummary(null);
     } finally {
       setIsLoading(false);
     }
@@ -88,12 +81,11 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F1F5F9] flex flex-col">
-      {/* Navbar */}
       <nav className="bg-[#0F172A] h-20 flex items-center sticky top-0 z-50 shadow-2xl shadow-slate-900/10 shrink-0">
         <div className="max-w-7xl mx-auto px-6 w-full flex justify-between items-center">
           <div 
             className="flex items-center gap-3 cursor-pointer group" 
-            onClick={() => { setView('home'); setQuery(''); setSelectedProduct(null); setAiSummary(null); }}
+            onClick={() => { setView('home'); setQuery(''); setSelectedProduct(null); setError(null); }}
           >
             <div className="relative">
               <div className="w-10 h-10 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
@@ -121,7 +113,6 @@ export default function App() {
       <div className="flex-1">
         {view === 'home' && (
           <main className="animate-in fade-in duration-500">
-            {/* Hero / Search Section */}
             <div className="bg-[#0F172A] py-24 relative overflow-hidden">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(37,99,235,0.1),transparent)]"></div>
               <div className="max-w-5xl mx-auto px-6 relative z-10">
@@ -140,7 +131,7 @@ export default function App() {
                         className="w-full bg-white h-16 pl-14 pr-4 rounded-2xl text-slate-900 font-bold placeholder:text-slate-400 outline-none shadow-inner text-lg focus:ring-4 focus:ring-blue-600/20 transition-all"
                       />
                     </div>
-                    <button className="bg-blue-600 text-white px-8 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-500 transition-all shadow-lg shadow-blue-600/20 active:scale-95">
+                    <button type="submit" className="bg-blue-600 text-white px-8 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-500 transition-all shadow-lg shadow-blue-600/20 active:scale-95">
                       Analyser
                     </button>
                   </form>
@@ -148,7 +139,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Popular Products */}
             <section className="max-w-7xl mx-auto px-6 py-24">
               <div className="flex items-center justify-between mb-12">
                 <h2 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-4">
@@ -172,34 +162,34 @@ export default function App() {
                         onClick={() => handleSearch(p.id, true)}
                       >
                         <div className="h-48 w-full flex items-center justify-center mb-8 overflow-hidden">
-                          <img src={p.image_url} alt={p.name} className="max-h-full object-contain group-hover:scale-110 transition-transform duration-700 drop-shadow-2xl" />
+                          <img src={p.image_url || ''} alt={String(p.name)} className="max-h-full object-contain group-hover:scale-110 transition-transform duration-700 drop-shadow-2xl" />
                         </div>
                         <div className="w-full text-left">
-                          <h3 className="font-black text-slate-900 text-lg mb-3 truncate group-hover:text-blue-600 transition-colors leading-tight">{p.name}</h3>
+                          <h3 className="font-black text-slate-900 text-lg mb-3 truncate group-hover:text-blue-600 transition-colors leading-tight">{String(p.name)}</h3>
                           <div className="flex items-center justify-between">
-                            <StarRating rating={p.analysis?.score ? p.analysis.score / 2 : 0} size="xs" />
+                            <StarRating rating={p.rating || p.score || p.analysis?.score || 0} size="xs" />
                             <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                              {Array.isArray(p.reviews) ? p.reviews.length : 0} avis
+                               PRODUIT VÉRIFIÉ
                             </span>
                           </div>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="col-span-full py-20 text-center text-slate-400 font-bold uppercase tracking-widest text-sm">
-                      Aucune donnée pour le moment.
+                    <div className="col-span-full py-20 text-center flex flex-col items-center gap-4">
+                      <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Aucun produit pour le moment.</p>
+                      <button onClick={loadHomeData} className="text-blue-600 text-xs font-black uppercase tracking-widest underline">Réessayer</button>
                     </div>
                   )
                 )}
               </div>
             </section>
 
-            {/* Recent Reviews Section */}
             <section className="max-w-7xl mx-auto px-6 pb-24">
               <div className="flex items-center justify-between mb-12">
                 <h2 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-4">
                   <span className="w-2 h-10 bg-emerald-500 rounded-full"></span>
-                  Derniers Avis
+                  Avis Récents
                 </h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -213,17 +203,18 @@ export default function App() {
                       <div key={r.id} className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-xl shadow-slate-200/40">
                         <div className="flex justify-between items-start mb-4">
                           <div>
-                            <p className="font-black text-slate-900 text-sm">{r.author_name}</p>
-                            <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest">{r.products?.name}</p>
+                            <p className="font-black text-slate-900 text-sm">{String(r.author_name)}</p>
+                            <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest">{String(r.products?.name || '')}</p>
                           </div>
                           <StarRating rating={r.rating} />
                         </div>
-                        <p className="text-slate-500 text-sm italic line-clamp-2">"{r.review_text}"</p>
+                        <p className="text-slate-500 text-sm italic line-clamp-2">"{String(r.review_text)}"</p>
                       </div>
                     ))
                   ) : (
-                    <div className="col-span-full py-10 text-center text-slate-400 font-bold uppercase tracking-widest text-sm">
-                      Aucune donnée pour le moment.
+                    <div className="col-span-full py-10 text-center flex flex-col items-center gap-4">
+                      <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Aucun avis récent.</p>
+                      <button onClick={loadHomeData} className="text-blue-600 text-xs font-black uppercase tracking-widest underline">Réessayer</button>
                     </div>
                   )
                 )}
@@ -240,8 +231,8 @@ export default function App() {
                    <div className="flex flex-col items-center gap-8">
                       <div className="w-20 h-20 border-[6px] border-blue-600 border-t-transparent rounded-full animate-spin shadow-xl"></div>
                       <div className="space-y-2">
-                        <p className="text-slate-900 font-black text-2xl tracking-tighter uppercase">Analyse IA</p>
-                        <p className="text-slate-400 font-bold tracking-widest text-xs">SYNTHÈSE EN COURS...</p>
+                        <p className="text-slate-900 font-black text-2xl tracking-tighter uppercase">Chargement...</p>
+                        <p className="text-slate-400 font-bold tracking-widest text-xs">EXTRACTION DES DONNÉES</p>
                       </div>
                    </div>
                 ) : (
@@ -258,9 +249,8 @@ export default function App() {
               <div className="space-y-12">
                 <ReviewCard 
                   product={selectedProduct} 
-                  summary={aiSummary} 
-                  isAnalyzing={isAnalyzing}
-                  relatedProducts={Array.isArray(popularProducts) ? popularProducts.filter(p => p.id !== selectedProduct.id).slice(0, 3) : []}
+                  isAnalyzing={false}
+                  relatedProducts={Array.isArray(popularProducts) ? popularProducts.filter(p => p.id !== (selectedProduct?.id)).slice(0, 3) : []}
                 />
                 <div className="flex justify-center pb-24">
                   <button onClick={() => setView('home')} className="bg-white border border-slate-200 text-slate-400 font-black uppercase tracking-[0.4em] text-[10px] px-12 py-5 rounded-[2rem] hover:text-blue-600 hover:border-blue-600 shadow-lg hover:shadow-2xl transition-all flex items-center gap-5">
@@ -285,10 +275,9 @@ export default function App() {
         )}
       </div>
 
-      {/* Footer */}
       <footer className="bg-white border-t border-slate-200 py-24 shrink-0">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-16 mb-20">
+          <div className="grid grid-cols-1 md:col-grid-4 gap-16 mb-20 md:grid-cols-4">
             <div className="col-span-1 md:col-span-2 space-y-8">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-[#0F172A] rounded-xl flex items-center justify-center shadow-xl">
@@ -299,7 +288,7 @@ export default function App() {
                 </span>
               </div>
               <p className="text-slate-400 font-medium text-lg leading-relaxed max-w-sm">
-                La première plateforme d'analyse automatisée par IA pour l'électronique de pointe. Ne croyez pas tout ce que vous lisez, croyez aux données.
+                La première plateforme d'analyse automatisée pour l'électronique de pointe. Ne croyez pas tout ce que vous lisez, croyez aux données réelles.
               </p>
             </div>
             

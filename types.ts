@@ -29,6 +29,13 @@ export interface Product {
   price?: number;
   category?: string;
   created_at?: string;
+  // Nouveaux champs intégrés dans la table products
+  rating?: number;
+  review_text?: string;
+  points_forts?: string[];
+  points_faibles?: string[];
+  fiche_technique?: string[];
+  score?: number;
   reviews?: Review[];
   analysis?: Analysis;
 }
@@ -36,11 +43,11 @@ export interface Product {
 export interface ProductSummary {
   rating: number;
   sentiment: string;
-  review_text: string[]; // Tableau de 4 chaînes
-  cycle_de_vie: string[]; // Tableau de 4 chaînes
-  points_forts: string[]; // Tableau de 4 chaînes
-  points_faibles: string[]; // Tableau de 2 à 4 chaînes
-  fiche_technique: string[]; // Tableau de 4 à 6 chaînes
+  review_text: string[];
+  cycle_de_vie: string[];
+  points_forts: string[];
+  points_faibles: string[];
+  fiche_technique: string[];
   alternative: string;
   image_url: string;
   seo_title: string;
