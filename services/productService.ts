@@ -5,7 +5,7 @@ import { Product, Analysis, Review } from '../types';
 /**
  * Récupère les derniers produits pour la page d'accueil
  */
-export const fetchHomeProducts = async (limit = 12): Promise<Product[]> => {
+export const fetchHomeProducts = async (limit = 4): Promise<Product[]> => {
   const { data, error } = await supabase
     .from('products')
     .select('*')
@@ -14,6 +14,23 @@ export const fetchHomeProducts = async (limit = 12): Promise<Product[]> => {
 
   if (error) {
     console.error("Erreur fetchHomeProducts:", error);
+    return [];
+  }
+  return data || [];
+};
+
+/**
+ * Récupère les derniers avis publiés sur le site
+ */
+export const fetchRecentReviews = async (limit = 3): Promise<Review[]> => {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*, products(name)')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Erreur fetchRecentReviews:", error);
     return [];
   }
   return data || [];
@@ -40,7 +57,6 @@ const safeParseArray = (val: any): string[] => {
  */
 export const fetchFullProductData = async (identifier: string, isId: boolean = false): Promise<{ data: Product | null; error: any }> => {
   try {
-    // 1. Récupération du produit de base
     let productQuery = supabase.from('products').select('*');
     if (isId) {
       productQuery = productQuery.eq('id', identifier);
@@ -56,7 +72,6 @@ export const fetchFullProductData = async (identifier: string, isId: boolean = f
 
     const product = products[0];
 
-    // 2. Récupération de l'analyse avec parsing sécurisé
     let analysisData: Analysis | undefined = undefined;
     try {
       const { data: analysis } = await supabase
@@ -76,7 +91,6 @@ export const fetchFullProductData = async (identifier: string, isId: boolean = f
       console.warn("Erreur analyse (non-fatale):", aErr);
     }
 
-    // 3. Récupération des avis
     let reviewsData: Review[] = [];
     try {
       const { data: reviews } = await supabase
@@ -102,9 +116,4 @@ export const fetchFullProductData = async (identifier: string, isId: boolean = f
     console.error("Erreur critique fetchFullProductData:", err);
     return { data: null, error: err };
   }
-};
-
-export const fetchAllProductNames = async (): Promise<string[]> => {
-  const { data } = await supabase.from('products').select('name');
-  return data?.map(p => p.name) || [];
 };
