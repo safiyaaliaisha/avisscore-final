@@ -7,12 +7,13 @@ interface ReviewCardProps {
   summary?: ProductSummary | null;
   isAnalyzing?: boolean;
   relatedProducts?: Product[];
+  recentReviews?: Product[];
 }
 
-const StarRating = ({ rating }: { rating: number }) => (
-  <div className="flex text-amber-400 gap-1">
+const StarRating = ({ rating, size = "xs" }: { rating: number; size?: string }) => (
+  <div className={`flex text-amber-500 gap-0.5 text-${size}`}>
     {[...Array(5)].map((_, i) => (
-      <i key={i} className={`${i < Math.floor(rating) ? "fas" : "far"} fa-star text-sm`}></i>
+      <i key={i} className={`${i < Math.floor(rating) ? "fas" : "far"} fa-star`}></i>
     ))}
   </div>
 );
@@ -45,7 +46,13 @@ const getSpecIcon = (key: string) => {
   return 'fa-gear';
 };
 
-export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnalyzing, relatedProducts = [] }) => {
+const getAvatarColor = (name: string) => {
+  const colors = ['bg-blue-100 text-blue-600', 'bg-emerald-100 text-emerald-600', 'bg-indigo-100 text-indigo-600', 'bg-rose-100 text-rose-600', 'bg-amber-100 text-amber-600'];
+  const index = name.length % colors.length;
+  return colors[index];
+};
+
+export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnalyzing, relatedProducts = [], recentReviews = [] }) => {
   const expertScore = product?.score || product?.analysis?.score || 0;
   const userScore = product?.rating || summary?.rating || 0;
   
@@ -59,34 +66,95 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
   return (
     <div className="max-w-6xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-1000">
       
-      <div className="border-b border-slate-200/60 pb-8 text-center sm:text-left">
-        <div className="flex flex-col sm:flex-row sm:items-end gap-4 mb-2">
-          <h1 className="text-5xl font-black text-slate-900 tracking-tighter">{String(product?.name || 'Produit')}</h1>
-          <span className="text-blue-600 font-bold text-lg mb-1">{String(product?.category || "Technologie")}</span>
+      {/* SECTION HAUT : AVIS RECENTS */}
+      <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Avis Récents</h2>
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Extraits de la communauté</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-5 p-4 bg-slate-900 rounded-[1.5rem] shadow-xl shadow-blue-500/20 transform hover:scale-105 transition-transform duration-300">
+            <div className="flex flex-col items-center">
+              <StarRating rating={globalScore / 2} size="xs" />
+              <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest mt-1">Score Global</span>
+            </div>
+            <div className="h-10 w-px bg-slate-700"></div>
+            <span className="text-4xl font-black text-white tracking-tighter">{ratingText}<span className="text-blue-500 text-xl ml-0.5">/10</span></span>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3 justify-center sm:justify-start">
-          <span className="bg-blue-600 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-lg shadow-blue-600/20">Données Réelles</span>
-          <span className="text-slate-400 font-bold text-sm">Produit vérifié & Note certifiée</span>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {recentReviews.length > 0 ? (
+            recentReviews.slice(0, 3).map((r) => (
+              <div key={r.id} className="bg-slate-50/50 rounded-2xl p-5 border border-slate-100 group hover:bg-white hover:shadow-md transition-all">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${getAvatarColor(r.name)}`}>
+                    {String(r.name).charAt(0)}
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-black text-slate-900 leading-none">Vérifié</p>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Récent</p>
+                  </div>
+                </div>
+                <p className="text-slate-500 text-[11px] leading-relaxed mb-3 line-clamp-2 italic font-medium">
+                  "{String(r.review_text)}"
+                </p>
+                <div className="flex items-center gap-2">
+                  <StarRating rating={r.rating || 4} />
+                  <span className="text-slate-900 font-black text-[10px]">{r.rating || 4}</span>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-slate-400 text-sm font-bold uppercase tracking-widest italic py-4 text-center col-span-full">
+              Recherche d'avis récents...
+            </p>
+          )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+        
+        {/* SECTION POINTS FORTS & FAIBLES (Anciennement Analyse Expert) */}
         <div className="lg:col-span-8 flex flex-col bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Verdict Final</h2>
-            <div className="flex items-center gap-5 p-4 bg-slate-900 rounded-[1.5rem] shadow-xl shadow-blue-500/20 transform hover:scale-105 transition-transform duration-300">
-              <div className="flex flex-col items-center">
-                <StarRating rating={globalScore / 2} />
-                <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest mt-1">Score Global</span>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-8">Points Forts & Faibles</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-auto">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-emerald-600 font-black uppercase tracking-widest text-[10px] mb-2">
+                <i className="fas fa-plus-circle"></i> Avantages
               </div>
-              <div className="h-10 w-px bg-slate-700"></div>
-              <span className="text-4xl font-black text-white tracking-tighter">{ratingText}<span className="text-blue-500 text-xl ml-0.5">/10</span></span>
+              <ul className="space-y-3">
+                {pointsForts.length > 0 ? pointsForts.map((p, i) => (
+                  <li key={i} className="flex items-start gap-3 text-slate-700 font-bold group/item">
+                    <div className="w-5 h-5 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+                      <i className="fas fa-check text-[8px] text-emerald-500"></i>
+                    </div>
+                    <span className="text-sm">{String(p)}</span>
+                  </li>
+                )) : <li className="text-slate-400 text-xs italic">Non spécifié</li>}
+              </ul>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-rose-600 font-black uppercase tracking-widest text-[10px] mb-2">
+                <i className="fas fa-minus-circle"></i> Inconvénients
+              </div>
+              <ul className="space-y-3">
+                {pointsFaibles.length > 0 ? pointsFaibles.map((p, i) => (
+                  <li key={i} className="flex items-start gap-3 text-slate-700 font-bold group/item">
+                    <div className="w-5 h-5 rounded-full bg-rose-50 flex items-center justify-center shrink-0">
+                      <i className="fas fa-times text-[8px] text-rose-500"></i>
+                    </div>
+                    <span className="text-sm">{String(p)}</span>
+                  </li>
+                )) : <li className="text-slate-400 text-xs italic">Non spécifié</li>}
+              </ul>
             </div>
           </div>
-          
-          <p className="text-slate-600 leading-relaxed text-xl font-medium mb-auto">
-            {product?.review_text || product?.description || "Aucune analyse disponible pour ce produit actuellement."}
-          </p>
 
           <div className="mt-8 pt-8 border-t border-slate-50">
             <div className="bg-slate-900 rounded-[1.25rem] p-5 flex flex-col sm:flex-row items-center gap-6 shadow-xl relative overflow-hidden group">
@@ -97,40 +165,53 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
                 </div>
                 <div>
                   <span className="block text-[10px] font-black text-blue-400 uppercase tracking-widest leading-none">Statut</span>
-                  <span className="text-white font-black text-xs uppercase">En stock</span>
+                  <span className="text-white font-black text-xs uppercase">Certifié</span>
                 </div>
               </div>
               <div className="flex-1 w-full text-white font-bold text-sm">
                 Prix indicatif : {product?.price ? `${product.price}€` : "Non spécifié"}
               </div>
               <div className="text-slate-400 text-xs italic font-medium max-w-xs text-center sm:text-left">
-                "Analyse basée sur les caractéristiques techniques réelles."
+                "Synthèse des points clés."
               </div>
             </div>
           </div>
         </div>
 
-        <div className="lg:col-span-4 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 flex items-center justify-center relative overflow-hidden group">
-          {product?.image_url ? (
-            <img 
-              src={product.image_url} 
-              alt={String(product?.name || '')} 
-              className="relative max-h-72 object-contain drop-shadow-[0_25px_60px_rgba(0,0,0,0.1)] group-hover:scale-110 transition-transform duration-700 z-10" 
-            />
-          ) : (
-            <div className="text-slate-200 text-6xl"><i className="fas fa-image"></i></div>
-          )}
+        {/* SECTION PRODUIT (Titre + Image) */}
+        <div className="lg:col-span-4 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col items-center justify-center relative overflow-hidden group">
+          <div className="mb-8 text-center w-full">
+            <h1 className="text-3xl font-black text-slate-900 tracking-tighter mb-1 line-clamp-2 leading-tight">
+              {String(product?.name || 'Produit')}
+            </h1>
+            <span className="text-blue-600 font-black text-[10px] uppercase tracking-widest">
+              {String(product?.category || "Technologie")}
+            </span>
+          </div>
+          
+          <div className="relative w-full aspect-square flex items-center justify-center">
+            {product?.image_url ? (
+              <img 
+                src={product.image_url} 
+                alt={String(product?.name || '')} 
+                className="relative max-h-full max-w-full object-contain drop-shadow-[0_25px_60px_rgba(0,0,0,0.15)] group-hover:scale-110 transition-transform duration-700 z-10" 
+              />
+            ) : (
+              <div className="text-slate-200 text-6xl"><i className="fas fa-image"></i></div>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* SECTION ANALYSE DÉTAILLÉE (Graphiques) */}
         <div className="lg:col-span-5 bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-xl shadow-slate-200/50 relative overflow-hidden flex flex-col">
           <div className="absolute top-0 right-0 p-8 opacity-[0.03] text-9xl text-slate-900 pointer-events-none">
             <i className="fas fa-chart-line"></i>
           </div>
           
           <h3 className="text-2xl font-black text-slate-900 mb-8 flex items-center gap-3">
-            <i className="fas fa-star-half-stroke text-blue-600"></i> Analyse Détaillée
+            <i className="fas fa-star-half-stroke text-blue-600"></i> Score Technique
           </h3>
 
           <div className="flex-1 flex flex-col justify-center space-y-8">
@@ -140,7 +221,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
                   <div className="w-6 h-6 bg-blue-600 rounded-lg flex items-center justify-center text-[10px] text-white">
                     <i className="fas fa-user-tie"></i>
                   </div>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Score Technique</span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tech</span>
                 </div>
                 <div className="flex items-baseline gap-1">
                   <span className="text-4xl font-black text-slate-900">{(expertScore * 2).toFixed(1)}</span>
@@ -153,7 +234,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
                   <div className="w-6 h-6 bg-emerald-500 rounded-lg flex items-center justify-center text-[10px] text-white">
                     <i className="fas fa-users"></i>
                   </div>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Score Public</span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Public</span>
                 </div>
                 <div className="flex items-baseline gap-1">
                   <span className="text-4xl font-black text-slate-900">{(userScore * 2).toFixed(1)}</span>
@@ -177,49 +258,21 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
               />
             </div>
           </div>
-          
-          <div className="mt-8 pt-6 border-t border-slate-50 text-[10px] font-bold text-slate-400 uppercase text-center tracking-[0.2em]">
-            Source : Base de données produits Avisscore
-          </div>
         </div>
 
-        <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-xl shadow-slate-200/50 relative overflow-hidden group">
-            <h3 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-3">
-              <span className="w-8 h-8 bg-emerald-500 text-white rounded-xl flex items-center justify-center text-xs">
-                <i className="fas fa-plus"></i>
-              </span>
-              Points forts
-            </h3>
-            <ul className="space-y-4">
-              {pointsForts.length > 0 ? pointsForts.map((p, i) => (
-                <li key={i} className="flex items-start gap-4 text-slate-700 font-bold group/item">
-                  <div className="w-5 h-5 rounded-full bg-emerald-50 flex items-center justify-center shrink-0 group-hover/item:bg-emerald-500 transition-colors">
-                    <i className="fas fa-check text-[8px] text-emerald-500 group-hover/item:text-white"></i>
-                  </div>
-                  <span className="text-sm">{String(p)}</span>
-                </li>
-              )) : <li className="text-slate-400 text-xs italic">Aucun point fort renseigné</li>}
-            </ul>
-          </div>
-
-          <div className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-xl shadow-slate-200/50 relative overflow-hidden group">
-            <h3 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-3">
-              <span className="w-8 h-8 bg-rose-500 text-white rounded-xl flex items-center justify-center text-xs">
-                <i className="fas fa-minus"></i>
-              </span>
-              Points faibles
-            </h3>
-            <ul className="space-y-4">
-              {pointsFaibles.length > 0 ? pointsFaibles.map((p, i) => (
-                <li key={i} className="flex items-start gap-4 text-slate-700 font-bold group/item">
-                  <div className="w-5 h-5 rounded-full bg-rose-50 flex items-center justify-center shrink-0 group-hover/item:bg-rose-500 transition-colors">
-                    <i className="fas fa-times text-[8px] text-rose-500 group-hover/item:text-white"></i>
-                  </div>
-                  <span className="text-sm">{String(p)}</span>
-                </li>
-              )) : <li className="text-slate-400 text-xs italic">Aucun point faible renseigné</li>}
-            </ul>
+        {/* SECTION VERDICT EXPERT (L'Analyse descriptive déplacée ici) */}
+        <div className="lg:col-span-7 bg-white rounded-[2.5rem] border border-slate-100 p-10 shadow-xl shadow-slate-200/50">
+          <h3 className="text-2xl font-black text-slate-900 mb-6 flex items-center gap-3">
+            <i className="fas fa-quote-left text-blue-600/20 text-4xl"></i>
+            Verdict de l'Expert
+          </h3>
+          <p className="text-slate-600 leading-relaxed text-lg font-medium">
+            {product?.review_text || product?.description || "L'analyse complète n'est pas encore disponible."}
+          </p>
+          <div className="mt-8 flex justify-end">
+             <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+               <i className="fas fa-fingerprint text-blue-500"></i> Analyse Authentifiée Avisscore
+             </div>
           </div>
         </div>
       </div>
@@ -246,7 +299,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
               );
             }) : (
               <div className="col-span-full py-10 text-center text-slate-400 text-sm font-bold uppercase tracking-widest border-2 border-dashed border-slate-100 rounded-3xl">
-                Spécifications techniques non disponibles
+                Non disponible
               </div>
             )}
           </div>

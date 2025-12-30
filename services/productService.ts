@@ -20,11 +20,21 @@ export const fetchHomeProducts = async (limit = 4): Promise<Product[]> => {
 };
 
 /**
- * Récupère les avis (Désactivé car table unique 'products')
+ * Récupère les produits ayant un avis pour la section "Avis Récents"
  */
-export const fetchRecentReviews = async (limit = 3): Promise<Review[]> => {
-  // Puisqu'il n'y a qu'une table 'products', on retourne un tableau vide
-  return [];
+export const fetchRecentReviews = async (limit = 3): Promise<Product[]> => {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .not('review_text', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("Erreur fetchRecentReviews:", error);
+    return [];
+  }
+  return data || [];
 };
 
 /**

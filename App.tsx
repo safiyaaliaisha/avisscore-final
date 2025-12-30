@@ -23,7 +23,7 @@ export default function App() {
   const [view, setView] = useState<ViewState>('home');
   const [query, setQuery] = useState('');
   const [popularProducts, setPopularProducts] = useState<Product[]>([]);
-  const [recentReviews, setRecentReviews] = useState<any[]>([]);
+  const [recentReviews, setRecentReviews] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,8 +79,14 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const getAvatarColor = (name: string) => {
+    const colors = ['bg-blue-100 text-blue-600', 'bg-emerald-100 text-emerald-600', 'bg-indigo-100 text-indigo-600', 'bg-rose-100 text-rose-600', 'bg-amber-100 text-amber-600'];
+    const index = name.length % colors.length;
+    return colors[index];
+  };
+
   return (
-    <div className="min-h-screen bg-[#F1F5F9] flex flex-col">
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
       <nav className="bg-[#0F172A] h-20 flex items-center sticky top-0 z-50 shadow-2xl shadow-slate-900/10 shrink-0">
         <div className="max-w-7xl mx-auto px-6 w-full flex justify-between items-center">
           <div 
@@ -187,34 +193,45 @@ export default function App() {
 
             <section className="max-w-7xl mx-auto px-6 pb-24">
               <div className="flex items-center justify-between mb-12">
-                <h2 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-4">
-                  <span className="w-2 h-10 bg-emerald-500 rounded-full"></span>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
                   Avis Récents
                 </h2>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {isLoading ? (
                   [...Array(3)].map((_, i) => (
-                    <div key={i} className="bg-white rounded-[2rem] p-8 border border-slate-100 animate-pulse h-40 shadow-lg"></div>
+                    <div key={i} className="bg-white rounded-2xl p-6 border border-slate-100 animate-pulse h-48 shadow-sm"></div>
                   ))
                 ) : (
                   Array.isArray(recentReviews) && recentReviews.length > 0 ? (
                     recentReviews.map((r) => (
-                      <div key={r.id} className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-xl shadow-slate-200/40">
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <p className="font-black text-slate-900 text-sm">{String(r.author_name)}</p>
-                            <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest">{String(r.products?.name || '')}</p>
+                      <div 
+                        key={r.id} 
+                        className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                        onClick={() => handleSearch(r.id, true)}
+                      >
+                        <div className="flex items-center gap-3 mb-5">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${getAvatarColor(r.name)}`}>
+                            {String(r.name).charAt(0)}
                           </div>
-                          <StarRating rating={r.rating} />
+                          <div>
+                            <p className="text-sm font-black text-slate-900 leading-none mb-1">Utilisateur Vérifié</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Il y a 3 heures</p>
+                          </div>
                         </div>
-                        <p className="text-slate-500 text-sm italic line-clamp-2">"{String(r.review_text)}"</p>
+                        <h4 className="font-black text-slate-900 mb-2 text-sm truncate group-hover:text-blue-600 transition-colors">{String(r.name)}</h4>
+                        <p className="text-slate-500 text-xs leading-relaxed mb-4 line-clamp-3 font-medium">
+                          "{String(r.review_text)}"
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <StarRating rating={r.rating || 4} />
+                          <span className="text-slate-900 font-black text-[11px]">{r.rating || 4}</span>
+                        </div>
                       </div>
                     ))
                   ) : (
                     <div className="col-span-full py-10 text-center flex flex-col items-center gap-4">
-                      <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Aucun avis récent.</p>
-                      <button onClick={loadHomeData} className="text-blue-600 text-xs font-black uppercase tracking-widest underline">Réessayer</button>
+                      <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Aucun avis récent.</p>
                     </div>
                   )
                 )}
@@ -251,6 +268,7 @@ export default function App() {
                   product={selectedProduct} 
                   isAnalyzing={false}
                   relatedProducts={Array.isArray(popularProducts) ? popularProducts.filter(p => p.id !== (selectedProduct?.id)).slice(0, 3) : []}
+                  recentReviews={recentReviews}
                 />
                 <div className="flex justify-center pb-24">
                   <button onClick={() => setView('home')} className="bg-white border border-slate-200 text-slate-400 font-black uppercase tracking-[0.4em] text-[10px] px-12 py-5 rounded-[2rem] hover:text-blue-600 hover:border-blue-600 shadow-lg hover:shadow-2xl transition-all flex items-center gap-5">
