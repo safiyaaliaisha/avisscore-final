@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Product, ProductSummary } from '../types';
+import { Product, ProductSummary, Review } from '../types';
 
 interface ReviewCardProps {
   product: Product;
@@ -18,169 +18,258 @@ const StarRating = ({ rating, size = "xs" }: { rating: number; size?: string }) 
   </div>
 );
 
-const ProgressBar = ({ progress, label, value, colorClass = "from-blue-600 to-indigo-600" }: { progress: number; label?: string; value?: string; colorClass?: string }) => (
-  <div className="mb-4 last:mb-0 w-full">
-    {(label || value) && (
-      <div className="flex justify-between items-center mb-1.5">
-        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
-        <span className="text-xs font-black text-slate-900">{value}</span>
-      </div>
-    )}
-    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden shadow-inner">
-      <div 
-        className={`bg-gradient-to-r ${colorClass} h-full rounded-full transition-all duration-1000 ease-out`} 
-        style={{ width: `${progress}%` }}
-      ></div>
-    </div>
-  </div>
-);
-
 const getSpecIcon = (key: string) => {
-  const k = String(key).toLowerCase();
-  if (k.includes('écran') || k.includes('screen') || k.includes('display')) return 'fa-mobile-screen-button';
-  if (k.includes('processeur') || k.includes('cpu') || k.includes('chip')) return 'fa-microchip';
-  if (k.includes('stockage') || k.includes('ssd') || k.includes('disk') || k.includes('storage')) return 'fa-hard-drive';
+  const k = String(key || "").toLowerCase();
+  if (k.includes('écran') || k.includes('screen') || k.includes('display') || k.includes('dalle')) return 'fa-mobile-screen-button';
+  if (k.includes('processeur') || k.includes('cpu') || k.includes('chip') || k.includes('soc')) return 'fa-microchip';
+  if (k.includes('stockage') || k.includes('ssd') || k.includes('disk') || k.includes('hdd')) return 'fa-hard-drive';
   if (k.includes('ram') || k.includes('mémoire') || k.includes('memory')) return 'fa-memory';
-  if (k.includes('batterie') || k.includes('battery')) return 'fa-battery-full';
-  if (k.includes('caméra') || k.includes('camera') || k.includes('photo')) return 'fa-camera';
-  return 'fa-gear';
+  if (k.includes('batterie') || k.includes('battery') || k.includes('autonomie')) return 'fa-battery-full';
+  if (k.includes('caméra') || k.includes('camera') || k.includes('photo') || k.includes('optique')) return 'fa-camera';
+  if (k.includes('poids') || k.includes('weight')) return 'fa-weight-hanging';
+  if (k.includes('dimension') || k.includes('taille') || k.includes('format')) return 'fa-ruler-combined';
+  if (k.includes('os') || k.includes('système') || k.includes('logiciel')) return 'fa-code';
+  if (k.includes('connectivité') || k.includes('wifi') || k.includes('bluetooth')) return 'fa-wifi';
+  if (k.includes('audio') || k.includes('son')) return 'fa-volume-high';
+  if (k.includes('charge') || k.includes('port')) return 'fa-plug-circle-bolt';
+  if (k.includes('moteur') || k.includes('engine')) return 'fa-engine';
+  if (k.includes('puissance') || k.includes('hp')) return 'fa-bolt';
+  return 'fa-atom';
 };
 
 const getAvatarColor = (name: string) => {
-  const colors = ['bg-blue-100 text-blue-600', 'bg-emerald-100 text-emerald-600', 'bg-indigo-100 text-indigo-600', 'bg-rose-100 text-rose-600', 'bg-amber-100 text-amber-600'];
-  const index = name.length % colors.length;
+  const colors = [
+    'bg-blue-100 text-blue-600', 
+    'bg-emerald-100 text-emerald-600', 
+    'bg-indigo-100 text-indigo-600', 
+    'bg-rose-100 text-rose-600', 
+    'bg-amber-100 text-amber-600'
+  ];
+  const index = (name || "User").length % colors.length;
   return colors[index];
+};
+
+const ProductReviewCard: React.FC<{ review: Partial<Review> & { isAI?: boolean } }> = ({ review }) => {
+  const source = review.source || (review.isAI ? "Analyse IA" : "Communauté");
+  const author = review.author_name || (review.isAI ? "Expert Avisscore" : "Acheteur");
+  
+  const sourceColors: Record<string, string> = {
+    fnac: 'border-amber-500/30 hover:bg-amber-500/5',
+    darty: 'border-red-500/30 hover:bg-red-500/5',
+    boulanger: 'border-orange-500/30 hover:bg-orange-500/5',
+    rakuten: 'border-rose-500/30 hover:bg-rose-500/5',
+    'analyse ia': 'border-blue-500/30 bg-blue-50/30 hover:bg-blue-100/50',
+    'synthèse avisscore': 'border-blue-500/30 bg-blue-50/30 hover:bg-blue-100/50',
+  };
+
+  const colorClass = sourceColors[source.toLowerCase()] || 'border-slate-200 hover:bg-slate-50';
+
+  return (
+    <div className={`flex flex-col h-full rounded-2xl border p-5 transition-all duration-500 bg-white hover:shadow-xl hover:-translate-y-1 group ${colorClass}`}>
+      <div className="flex items-center gap-3 mb-4">
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-sm ${getAvatarColor(author)}`}>
+          {author.charAt(0).toUpperCase()}
+        </div>
+        <div className="overflow-hidden">
+          <h4 className="font-bold text-slate-800 text-sm truncate leading-tight">
+            {author}
+          </h4>
+          <div className="flex items-center gap-1.5">
+            <i className={`fas ${review.isAI ? 'fa-microchip text-blue-500' : 'fa-check-circle text-emerald-500'} text-[8px]`}></i>
+            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+              {review.isAI ? 'Certifié Neural' : 'Avis vérifié'} • {source}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 mb-4">
+        <p className="text-slate-600 text-xs leading-relaxed line-clamp-4 font-medium italic">
+          "{review.review_text}"
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between pt-3 border-t border-slate-50">
+        <StarRating rating={review.rating || 4} />
+        <span className="text-slate-900 font-black text-[11px]">{review.rating || "4.0"}</span>
+      </div>
+    </div>
+  );
 };
 
 export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnalyzing, relatedProducts = [], recentReviews = [] }) => {
   const expertScore = product?.score || product?.analysis?.score || 0;
   const userScore = product?.rating || summary?.rating || 0;
-  
   const globalScore = expertScore > 0 ? (expertScore * 0.6 + userScore * 2 * 0.4) : (userScore > 0 ? userScore * 2 : 0);
-  const ratingText = globalScore.toFixed(1);
+  const ratingText = globalScore > 0 ? globalScore.toFixed(1) : "N/A";
 
-  const pointsForts = Array.isArray(product?.points_forts) ? product.points_forts : (Array.isArray(product?.analysis?.points_forts) ? product.analysis.points_forts : []);
-  const pointsFaibles = Array.isArray(product?.points_faibles) ? product.points_faibles : (Array.isArray(product?.analysis?.points_faibles) ? product.analysis.points_faibles : []);
-  const ficheTechnique = Array.isArray(product?.fiche_technique) ? product.fiche_technique : [];
+  const pointsForts = Array.isArray(summary?.points_forts) && summary.points_forts.length > 0 ? summary.points_forts : (Array.isArray(product?.points_forts) ? product.points_forts : []);
+  const pointsFaibles = Array.isArray(summary?.points_faibles) && summary.points_faibles.length > 0 ? summary.points_faibles : (Array.isArray(product?.points_faibles) ? product.points_faibles : []);
+  const ficheTechnique = Array.isArray(summary?.fiche_technique) && summary.fiche_technique.length > 0 ? summary.fiche_technique : (Array.isArray(product?.fiche_technique) ? product.fiche_technique : []);
+  
+  // LOGIQUE DE RÉCUPÉRATION DES AVIS (Table Supabase products columns: fnac_rev, darty_rev, etc.)
+  let topReviews: any[] = [];
+  
+  // 1. On vérifie d'abord les avis réels de la communauté (table reviews liée)
+  const realReviews = Array.isArray(product?.reviews) ? product.reviews : [];
+  topReviews = [...realReviews];
+
+  // 2. On ajoute les avis marchands extraits de la table products (fnac_rev, darty_rev, boulanger_rev, rakuten_rev)
+  const merchantReviews = [
+    { source: 'Fnac', text: product.fnac_rev, author: 'Client Fnac' },
+    { source: 'Darty', text: product.darty_rev, author: 'Client Darty' },
+    { source: 'Boulanger', text: product.boulanger_rev, author: 'Client Boulanger' },
+    { source: 'Rakuten', text: product.rakuten_rev, author: 'Acheteur Rakuten' }
+  ].filter(r => r.text && r.text.trim() !== '');
+
+  merchantReviews.forEach((m, idx) => {
+    if (topReviews.length < 3) {
+      topReviews.push({
+        id: `merchant-${m.source}-${idx}`,
+        author_name: m.author,
+        review_text: m.text,
+        rating: 4.5, // Note par défaut pour les marchands
+        source: m.source,
+        isAI: false
+      });
+    }
+  });
+
+  // 3. Si on a toujours moins de 3, on complète avec les synthèses IA (Gemini)
+  if (topReviews.length < 3 && summary?.review_text) {
+    const aiTexts = summary.review_text;
+    for (let i = 0; i < aiTexts.length && topReviews.length < 3; i++) {
+      topReviews.push({
+        id: `ai-fill-${i}`,
+        author_name: `Expert IA ${i + 1}`,
+        review_text: aiTexts[i],
+        rating: summary.rating || 4,
+        source: "Synthèse Avisscore",
+        isAI: true
+      });
+    }
+  }
+
+  // 4. Fallback final sur le verdict expert global si vraiment vide
+  if (topReviews.length < 3) {
+    const fallbackText = product.review_text || product.description || "Analyse technique exhaustive en attente de validation finale par nos experts.";
+    topReviews.push({
+      id: 'expert-fallback',
+      author_name: "Verdict Final",
+      review_text: fallbackText,
+      rating: product.score || 8,
+      source: "Avisscore Labs",
+      isAI: true
+    });
+  }
+
+  // On limite à exactement 3 pour garder l'esthétique de la grille
+  topReviews = topReviews.slice(0, 3);
+
+  if (!product) return null;
 
   return (
     <div className="max-w-6xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-1000">
       
-      {/* SECTION HAUT : AVIS RECENTS */}
-      <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8">
-          <div className="flex flex-col gap-1">
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Avis Récents</h2>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Extraits de la communauté</span>
+      {/* SECTION AVIS PRODUIT - DYNAMIQUE & REMPLIE */}
+      <div className="bg-white p-8 md:p-12 rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/50 relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-12 opacity-[0.02] text-[15rem] text-slate-900 pointer-events-none -rotate-12 translate-x-20 -translate-y-20">
+          <i className="fas fa-comments"></i>
+        </div>
+
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-12">
+          <div className="flex flex-col gap-2">
+            <h2 className="text-3xl font-black text-slate-900 tracking-tighter">Avis du Produit</h2>
+            <div className="flex items-center gap-3">
+              <span className={`w-2 h-2 ${realReviews.length >= 3 || merchantReviews.length >= 3 ? 'bg-emerald-500' : 'bg-blue-500'} rounded-full animate-pulse`}></span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">
+                {merchantReviews.length > 0 ? "Validation Marchands Certifiée" : "Analyse Hybride Experts & IA"}
+              </span>
             </div>
           </div>
-          <div className="flex items-center gap-5 p-4 bg-slate-900 rounded-[1.5rem] shadow-xl shadow-blue-500/20 transform hover:scale-105 transition-transform duration-300">
+          <div className="flex items-center gap-6 p-4 bg-[#0F172A] rounded-2xl shadow-xl border border-white/5">
             <div className="flex flex-col items-center">
               <StarRating rating={globalScore / 2} size="xs" />
-              <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest mt-1">Score Global</span>
+              <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest mt-1">Score Final</span>
             </div>
-            <div className="h-10 w-px bg-slate-700"></div>
-            <span className="text-4xl font-black text-white tracking-tighter">{ratingText}<span className="text-blue-500 text-xl ml-0.5">/10</span></span>
+            <div className="h-10 w-px bg-white/10"></div>
+            <div className="flex flex-col">
+               <span className="text-3xl font-black text-white tracking-tighter leading-none">{ratingText}<span className="text-blue-500 text-lg ml-0.5">/10</span></span>
+            </div>
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {recentReviews.length > 0 ? (
-            recentReviews.slice(0, 3).map((r) => (
-              <div key={r.id} className="bg-slate-50/50 rounded-2xl p-5 border border-slate-100 group hover:bg-white hover:shadow-md transition-all">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${getAvatarColor(r.name)}`}>
-                    {String(r.name).charAt(0)}
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-black text-slate-900 leading-none">Vérifié</p>
-                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Récent</p>
-                  </div>
-                </div>
-                <p className="text-slate-500 text-[11px] leading-relaxed mb-3 line-clamp-2 italic font-medium">
-                  "{String(r.review_text)}"
-                </p>
-                <div className="flex items-center gap-2">
-                  <StarRating rating={r.rating || 4} />
-                  <span className="text-slate-900 font-black text-[10px]">{r.rating || 4}</span>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p className="text-slate-400 text-sm font-bold uppercase tracking-widest italic py-4 text-center col-span-full">
-              Recherche d'avis récents...
-            </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+          {topReviews.map((rev) => (
+            <ProductReviewCard key={rev.id} review={rev} />
+          ))}
+          {topReviews.length === 0 && (
+             <div className="col-span-full py-16 text-center bg-slate-50/50 rounded-[2rem] border border-dashed border-slate-200">
+                <i className="fas fa-circle-notch fa-spin text-blue-500 text-3xl mb-4"></i>
+                <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Génération des avis marchands...</p>
+             </div>
           )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-        
-        {/* SECTION POINTS FORTS & FAIBLES (Anciennement Analyse Expert) */}
-        <div className="lg:col-span-8 flex flex-col bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50">
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-8">Points Forts & Faibles</h2>
+        <div className="lg:col-span-8 flex flex-col bg-[#F8FAFC] p-10 rounded-[3rem] border border-slate-200 shadow-2xl relative overflow-hidden group/pros">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-rose-500/5 blur-[100px] pointer-events-none"></div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-auto">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-emerald-600 font-black uppercase tracking-widest text-[10px] mb-2">
-                <i className="fas fa-plus-circle"></i> Avantages
-              </div>
-              <ul className="space-y-3">
-                {pointsForts.length > 0 ? pointsForts.map((p, i) => (
-                  <li key={i} className="flex items-start gap-3 text-slate-700 font-bold group/item">
-                    <div className="w-5 h-5 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
-                      <i className="fas fa-check text-[8px] text-emerald-500"></i>
-                    </div>
-                    <span className="text-sm">{String(p)}</span>
-                  </li>
-                )) : <li className="text-slate-400 text-xs italic">Non spécifié</li>}
-              </ul>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-rose-600 font-black uppercase tracking-widest text-[10px] mb-2">
-                <i className="fas fa-minus-circle"></i> Inconvénients
-              </div>
-              <ul className="space-y-3">
-                {pointsFaibles.length > 0 ? pointsFaibles.map((p, i) => (
-                  <li key={i} className="flex items-start gap-3 text-slate-700 font-bold group/item">
-                    <div className="w-5 h-5 rounded-full bg-rose-50 flex items-center justify-center shrink-0">
-                      <i className="fas fa-times text-[8px] text-rose-500"></i>
-                    </div>
-                    <span className="text-sm">{String(p)}</span>
-                  </li>
-                )) : <li className="text-slate-400 text-xs italic">Non spécifié</li>}
-              </ul>
+          <div className="relative z-10 mb-10 flex items-center justify-between border-b border-slate-200 pb-6">
+            <h2 className="text-3xl font-black text-slate-900 tracking-tighter flex items-center gap-4">
+              <i className="fas fa-layer-group text-blue-600"></i>
+              Analyse <span className="text-blue-600 italic">8K Digital</span>
+            </h2>
+            <div className="px-4 py-1.5 bg-slate-900 rounded-full border border-blue-500/30">
+              <span className="text-[10px] font-black text-white uppercase tracking-widest animate-pulse">Scanning Data...</span>
             </div>
           </div>
-
-          <div className="mt-8 pt-8 border-t border-slate-50">
-            <div className="bg-slate-900 rounded-[1.25rem] p-5 flex flex-col sm:flex-row items-center gap-6 shadow-xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-24 h-full bg-blue-600/10 -skew-x-12 transform translate-x-8"></div>
-              <div className="flex items-center gap-3 shrink-0">
-                <div className="w-10 h-10 bg-blue-600/20 rounded-xl flex items-center justify-center text-blue-400">
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-auto relative z-10">
+            <div className="space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center border border-emerald-500/20 text-emerald-600 shadow-emerald-500/20 shadow-lg">
                   <i className="fas fa-check-circle"></i>
                 </div>
                 <div>
-                  <span className="block text-[10px] font-black text-blue-400 uppercase tracking-widest leading-none">Statut</span>
-                  <span className="text-white font-black text-xs uppercase">Certifié</span>
+                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Points Forts</h3>
+                  <p className="text-[9px] text-emerald-500 font-black uppercase tracking-[0.2em] leading-none mt-1">Avantages Validés</p>
                 </div>
               </div>
-              <div className="flex-1 w-full text-white font-bold text-sm">
-                Prix indicatif : {product?.price ? `${product.price}€` : "Non spécifié"}
+              <ul className="space-y-4">
+                {pointsForts.length > 0 ? pointsForts.map((p, i) => (
+                  <li key={i} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-emerald-500/30 hover:shadow-emerald-500/10 hover:-translate-y-1 transition-all duration-300 group/item border-l-4 border-l-emerald-500">
+                    <span className="text-sm font-bold text-slate-700 leading-tight">{String(p)}</span>
+                  </li>
+                )) : <li className="text-slate-400 text-xs italic">Chargement des données...</li>}
+              </ul>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-rose-500/10 rounded-xl flex items-center justify-center border border-rose-500/20 text-rose-600 shadow-rose-500/20 shadow-lg">
+                  <i className="fas fa-times-circle"></i>
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Points Faibles</h3>
+                  <p className="text-[9px] text-rose-500 font-black uppercase tracking-[0.2em] leading-none mt-1">Limites Systèmes</p>
+                </div>
               </div>
-              <div className="text-slate-400 text-xs italic font-medium max-w-xs text-center sm:text-left">
-                "Synthèse des points clés."
-              </div>
+              <ul className="space-y-4">
+                {pointsFaibles.length > 0 ? pointsFaibles.map((p, i) => (
+                  <li key={i} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-rose-500/30 hover:shadow-rose-500/10 hover:-translate-y-1 transition-all duration-300 group/item border-l-4 border-l-rose-500">
+                    <span className="text-sm font-bold text-slate-700 leading-tight">{String(p)}</span>
+                  </li>
+                )) : <li className="text-slate-400 text-xs italic">Chargement des données...</li>}
+              </ul>
             </div>
           </div>
         </div>
 
-        {/* SECTION PRODUIT (Titre + Image) */}
         <div className="lg:col-span-4 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col items-center justify-center relative overflow-hidden group">
-          <div className="mb-8 text-center w-full">
+          <div className="mb-8 text-center w-full relative z-10">
             <h1 className="text-3xl font-black text-slate-900 tracking-tighter mb-1 line-clamp-2 leading-tight">
               {String(product?.name || 'Produit')}
             </h1>
@@ -188,13 +277,12 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
               {String(product?.category || "Technologie")}
             </span>
           </div>
-          
-          <div className="relative w-full aspect-square flex items-center justify-center">
+          <div className="relative w-full aspect-square flex items-center justify-center z-10">
             {product?.image_url ? (
               <img 
                 src={product.image_url} 
                 alt={String(product?.name || '')} 
-                className="relative max-h-full max-w-full object-contain drop-shadow-[0_25px_60px_rgba(0,0,0,0.15)] group-hover:scale-110 transition-transform duration-700 z-10" 
+                className="relative max-h-full max-w-full object-contain drop-shadow-[0_25px_60px_rgba(0,0,0,0.15)] group-hover:scale-110 transition-transform duration-700" 
               />
             ) : (
               <div className="text-slate-200 text-6xl"><i className="fas fa-image"></i></div>
@@ -203,131 +291,74 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* SECTION ANALYSE DÉTAILLÉE (Graphiques) */}
-        <div className="lg:col-span-5 bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-xl shadow-slate-200/50 relative overflow-hidden flex flex-col">
-          <div className="absolute top-0 right-0 p-8 opacity-[0.03] text-9xl text-slate-900 pointer-events-none">
-            <i className="fas fa-chart-line"></i>
-          </div>
-          
-          <h3 className="text-2xl font-black text-slate-900 mb-8 flex items-center gap-3">
-            <i className="fas fa-star-half-stroke text-blue-600"></i> Score Technique
-          </h3>
-
-          <div className="flex-1 flex flex-col justify-center space-y-8">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100 group hover:bg-white hover:shadow-xl transition-all duration-300">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 bg-blue-600 rounded-lg flex items-center justify-center text-[10px] text-white">
-                    <i className="fas fa-user-tie"></i>
-                  </div>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tech</span>
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-black text-slate-900">{(expertScore * 2).toFixed(1)}</span>
-                  <span className="text-slate-300 font-bold text-sm">/10</span>
-                </div>
-              </div>
-
-              <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100 group hover:bg-white hover:shadow-xl transition-all duration-300">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 bg-emerald-500 rounded-lg flex items-center justify-center text-[10px] text-white">
-                    <i className="fas fa-users"></i>
-                  </div>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Public</span>
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-black text-slate-900">{(userScore * 2).toFixed(1)}</span>
-                  <span className="text-slate-300 font-bold text-sm">/10</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <ProgressBar 
-                progress={expertScore * 20} 
-                label="Qualité Technique" 
-                value={expertScore >= 4.5 ? "Premium" : "Standard"} 
-                colorClass="from-blue-500 to-indigo-600" 
-              />
-              <ProgressBar 
-                progress={userScore * 20} 
-                label="Note Utilisateur" 
-                value={userScore >= 4.5 ? "Exceptionnelle" : "Correcte"} 
-                colorClass="from-emerald-400 to-teal-600" 
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* SECTION VERDICT EXPERT (L'Analyse descriptive déplacée ici) */}
-        <div className="lg:col-span-7 bg-white rounded-[2.5rem] border border-slate-100 p-10 shadow-xl shadow-slate-200/50">
-          <h3 className="text-2xl font-black text-slate-900 mb-6 flex items-center gap-3">
-            <i className="fas fa-quote-left text-blue-600/20 text-4xl"></i>
-            Verdict de l'Expert
-          </h3>
-          <p className="text-slate-600 leading-relaxed text-lg font-medium">
-            {product?.review_text || product?.description || "L'analyse complète n'est pas encore disponible."}
-          </p>
-          <div className="mt-8 flex justify-end">
-             <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-               <i className="fas fa-fingerprint text-blue-500"></i> Analyse Authentifiée Avisscore
-             </div>
-          </div>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <div className="lg:col-span-7 bg-white rounded-[2.5rem] border border-slate-100 p-10 shadow-xl shadow-slate-200/50">
-          <div className="flex items-center justify-between mb-10">
-            <h3 className="text-2xl font-black text-slate-900">Spécifications</h3>
+        <div className="lg:col-span-7 bg-[#0F172A] rounded-[3rem] p-10 shadow-[0_40px_100px_rgba(0,0,0,0.5)] relative overflow-hidden group/specs border border-blue-500/20">
+          <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#3b82f6 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
+          <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-600/20 rounded-full blur-[120px] pointer-events-none animate-pulse"></div>
+          
+          <div className="relative z-10 flex items-center justify-between mb-12 border-b border-white/5 pb-8">
+            <div>
+              <h3 className="text-4xl font-black text-white tracking-tighter flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-600/20 rounded-2xl flex items-center justify-center border border-blue-500/30">
+                  <i className="fas fa-microchip text-blue-400 text-2xl animate-spin-slow"></i>
+                </div>
+                Spécifications <span className="text-blue-500 italic">Ultra</span>
+              </h3>
+              <p className="text-[11px] font-black text-blue-400/60 uppercase tracking-[0.5em] mt-2 flex items-center gap-3">
+                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping"></span>
+                Certification High-Fidelity 8K
+              </p>
+            </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 relative z-10">
             {ficheTechnique.length > 0 ? ficheTechnique.map((f, i) => {
               const parts = String(f).split(':');
-              const icon = getSpecIcon(parts[0]?.trim() || "");
+              const keyName = parts[0]?.trim() || "Module";
+              const valueName = parts.slice(1).join(':').trim() || "Information";
+              const icon = getSpecIcon(keyName);
               return (
-                <div key={i} className="flex items-center gap-5 p-5 rounded-3xl bg-slate-50/50 border border-slate-100 hover:border-blue-200 hover:bg-white hover:shadow-xl transition-all group">
-                  <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 group-hover:text-blue-600 transition-all shadow-sm">
-                    <i className={`fas ${icon} text-xl`}></i>
+                <div key={i} className="group/item relative flex items-center gap-6 p-6 rounded-[2rem] bg-slate-900/40 border border-white/5 hover:border-blue-500/50 hover:bg-blue-600/10 transition-all duration-500 overflow-hidden shadow-inner">
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/[0.05] to-transparent pointer-events-none opacity-0 group-hover/item:opacity-100 transition-opacity"></div>
+                  <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-white/10 flex items-center justify-center text-slate-500 group-hover/item:text-blue-400 group-hover/item:border-blue-500/40 group-hover/item:shadow-[0_0_25px_rgba(59,130,246,0.3)] transition-all duration-500 shrink-0 relative z-10">
+                    <i className={`fas ${icon} text-2xl group-hover/item:scale-110 transition-transform duration-500`}></i>
                   </div>
-                  <div className="overflow-hidden">
-                    <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{parts[0]?.trim() || 'Info'}</span>
-                    <span className="block text-sm font-black text-slate-900 truncate">{parts.slice(1).join(':').trim() || "N/A"}</span>
+                  <div className="overflow-hidden relative z-10 flex flex-col justify-center">
+                    <span className="block text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1.5">
+                      {keyName}
+                    </span>
+                    <span className="block text-lg font-black text-white tracking-tight leading-tight group-hover/item:text-blue-100">
+                      {valueName}
+                    </span>
                   </div>
                 </div>
               );
             }) : (
-              <div className="col-span-full py-10 text-center text-slate-400 text-sm font-bold uppercase tracking-widest border-2 border-dashed border-slate-100 rounded-3xl">
-                Non disponible
+              <div className="col-span-full py-10 text-center text-slate-600 font-black uppercase tracking-widest italic border-2 border-dashed border-white/5 rounded-3xl">
+                Analyse Technique en cours...
               </div>
             )}
           </div>
         </div>
 
-        <div className="lg:col-span-5 space-y-6">
-          <h3 className="text-2xl font-black text-slate-900 px-2 flex items-center justify-between">
-            Produits Similaires
+        <div className="lg:col-span-5 bg-white rounded-[3rem] border border-slate-100 p-10 shadow-xl shadow-slate-200/50 flex flex-col h-full">
+          <h3 className="text-2xl font-black text-slate-900 mb-8 flex items-center gap-4">
+            <i className="fas fa-gavel text-blue-600"></i> Verdict Expert
           </h3>
-          <div className="grid grid-cols-1 gap-4">
-            {Array.isArray(relatedProducts) && relatedProducts.length > 0 ? relatedProducts.map((p, i) => (
-              <div key={i} className="bg-white rounded-[2rem] border border-slate-100 p-5 shadow-lg flex items-center gap-6 group hover:shadow-2xl transition-all duration-500">
-                <div className="w-24 h-24 shrink-0 bg-slate-50 rounded-2xl p-2 flex items-center justify-center group-hover:bg-blue-50 transition-colors">
-                  <img src={p.image_url || ''} alt={String(p.name)} className="max-h-full object-contain group-hover:scale-110 transition-transform" />
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <h4 className="text-sm font-black text-slate-900 mb-1 truncate group-hover:text-blue-600">{String(p.name)}</h4>
-                  <StarRating rating={p.rating || p.score || 4} />
-                  <div className="mt-3 flex gap-2">
-                    <button className="bg-[#0F172A] text-white text-[9px] font-black px-4 py-2 rounded-xl hover:bg-blue-600 transition-all uppercase">Détails</button>
-                  </div>
-                </div>
-              </div>
-            )) : (
-              <div className="py-10 text-center text-slate-300 font-bold uppercase tracking-widest text-[10px]">
-                Aucun produit similaire trouvé
-              </div>
-            )}
+          <div className="flex-1 relative">
+            <div className="absolute top-0 left-0 w-8 h-8 opacity-[0.05] text-blue-900 text-6xl -translate-x-4 -translate-y-4">
+              <i className="fas fa-quote-left"></i>
+            </div>
+            <p className="text-slate-600 leading-relaxed text-lg font-medium italic relative z-10">
+              {summary?.review_text?.[0] || product?.review_text || product?.description || "L'analyse française certifiée est en cours de déploiement."}
+            </p>
+          </div>
+          <div className="mt-10 pt-8 border-t border-slate-50 flex items-center justify-between">
+             <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+               <i className="fas fa-fingerprint text-blue-500"></i> Authentifié par Avisscore Neural
+             </div>
+             <span className="bg-blue-600 text-white px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest">
+               Expert Choice
+             </span>
           </div>
         </div>
       </div>

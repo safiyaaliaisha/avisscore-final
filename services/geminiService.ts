@@ -9,30 +9,27 @@ export const getAIReviewSummary = async (productName: string, reviews: Review[])
   
   const reviewsContext = reviews
     .slice(0, 20)
-    .map(r => `Note: ${r.rating}/5, Avis: ${r.review_text}`)
+    .map(r => `Source: ${r.source || 'Inconnue'}, Note: ${r.rating}/5, Avis: ${r.review_text}`)
     .join('\n');
   
-  const systemInstruction = `Tu es un expert critique certifié. Ta mission est de synthétiser EXCLUSIVEMENT les avis clients fournis en FRANÇAIS.
-INTERDICTIONS :
-- Ne jamais inventer de faits non présents dans les avis.
-- Ne jamais retourner de placeholders ou données de démonstration.
-- Ne jamais répondre dans une langue autre que le FRANÇAIS.
-- Si une information technique est absente, indique "Non mentionné".
+  const systemInstruction = `Tu es un expert critique certifié spécialisé dans le marché FRANÇAIS.
+MISSION : Synthétiser les avis clients en FRANÇAIS de haute qualité.
+RÈGLE D'OR : Même si les avis sources sont en anglais ou dans une autre langue, ta réponse doit être à 100% en FRANÇAIS fluide et professionnel.
 
 STRUCTURE DU JSON :
 - rating : score moyen calculé à partir des avis (1-5).
-- review_text : tableau de EXACTEMENT 4 phrases de synthèse réelle en français.
-- cycle_de_vie : tableau de EXACTEMENT 4 chaînes basées sur les retours d'utilisation longue durée en français.
-- points_forts : tableau de EXACTEMENT 3 points réels cités par les clients en français.
-- points_faibles : tableau de EXACTEMENT 3 critiques réelles citées par les clients en français.
-- fiche_technique : tableau de EXACTEMENT 4 caractéristiques mentionnées (Format: "Clé: Valeur") en français.
-- alternative : chaîne "Nom du produit - Pourquoi" si mentionnée ou pertinente en français.
-- image_url : laisser vide si non sûr.
-- seo_title : Titre optimisé en français.
-- seo_description : Description courte en français.`;
+- review_text : tableau de EXACTEMENT 4 phrases de synthèse réelle en français (ton expert).
+- cycle_de_vie : tableau de EXACTEMENT 4 étapes de vie du produit basées sur l'usure mentionnée.
+- points_forts : tableau de EXACTEMENT 3 points positifs réels.
+- points_faibles : tableau de EXACTEMENT 3 critiques réelles.
+- fiche_technique : tableau de EXACTEMENT 4 caractéristiques (Format: "Clé: Valeur").
+- alternative : chaîne "Nom du produit - Pourquoi" (ex: "iPad Air - Meilleur rapport qualité/prix").
+- image_url : laisser vide.
+- seo_title : Titre SEO accrocheur en français.
+- seo_description : Description méta courte en français.`;
 
   const prompt = `Produit : ${productName}.
-Voici les avis clients réels pour synthèse :
+Voici les avis clients réels (Fnac, Darty, Boulanger, etc.) à synthétiser obligatoirement en FRANÇAIS :
 ${reviewsContext}`;
 
   try {

@@ -35,9 +35,15 @@ export interface Product {
   points_forts?: string[];
   points_faibles?: string[];
   fiche_technique?: string[];
+  cycle_de_vie?: string[];
   score?: number;
   reviews?: Review[];
   analysis?: Analysis;
+  // Colonnes marchands spécifiques
+  fnac_rev?: string;
+  darty_rev?: string;
+  boulanger_rev?: string;
+  rakuten_rev?: string;
 }
 
 export interface ProductSummary {

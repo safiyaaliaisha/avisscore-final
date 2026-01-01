@@ -6,59 +6,87 @@ import { Product, Review } from '../types';
  * Récupère les derniers produits pour la page d'accueil
  */
 export const fetchHomeProducts = async (limit = 4): Promise<Product[]> => {
-  const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(limit);
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
-  if (error) {
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
     console.error("Erreur fetchHomeProducts:", error);
     return [];
   }
-  return data || [];
 };
 
 /**
- * Récupère les produits ayant un avis pour la section "Avis Récents"
+ * Récupère les derniers avis réels de la communauté (table reviews)
+ * Jointure avec 'products' pour afficher le nom du produit concerné.
+ */
+export const fetchLatestCommunityReviews = async (limit = 3): Promise<any[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('reviews')
+      .select('*, products(name, image_url)')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error("Erreur fetchLatestCommunityReviews:", error);
+    return [];
+  }
+};
+
+/**
+ * Récupère les produits ayant un avis pour la section "Avis Récents" (Ancienne version, conservée pour compatibilité)
  */
 export const fetchRecentReviews = async (limit = 3): Promise<Product[]> => {
-  const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .not('review_text', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(limit);
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .not('review_text', 'is', null)
+      .limit(limit);
 
-  if (error) {
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
     console.error("Erreur fetchRecentReviews:", error);
     return [];
   }
-  return data || [];
 };
 
 /**
- * Récupère un produit complet depuis la table unique 'products'.
+ * Récupère un produit complet avec ses avis associés (table reviews).
  */
 export const fetchFullProductData = async (identifier: string, isId: boolean = false): Promise<{ data: Product | null; error: any }> => {
   try {
-    let productQuery = supabase.from('products').select('*');
+    let query = supabase.from('products').select('*, reviews(*)');
+    
     if (isId) {
-      productQuery = productQuery.eq('id', identifier);
+      query = query.eq('id', identifier);
     } else {
-      productQuery = productQuery.ilike('name', `%${identifier}%`);
+      query = query.ilike('name', `%${identifier}%`);
     }
 
-    const { data: products, error: pError } = await productQuery.limit(1);
+    const { data, error } = await query.maybeSingle();
 
-    if (pError || !products || products.length === 0) {
-      return { data: null, error: pError || 'Produit non trouvé' };
+    if (error) {
+      console.warn("Erreur lors de la récupération avec jointure reviews, essai sans jointure...", error);
+      const fallbackQuery = isId 
+        ? supabase.from('products').select('*').eq('id', identifier)
+        : supabase.from('products').select('*').ilike('name', `%${identifier}%`);
+      
+      const { data: fbData, error: fbError } = await fallbackQuery.maybeSingle();
+      if (fbError || !fbData) return { data: null, error: fbError || 'Produit non trouvé' };
+      return { data: fbData, error: null };
     }
 
-    return { 
-      data: products[0], 
-      error: null 
-    };
+    return { data, error: null };
   } catch (err) {
     console.error("Erreur critique fetchFullProductData:", err);
     return { data: null, error: err };
