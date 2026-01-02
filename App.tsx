@@ -53,20 +53,22 @@ export default function App() {
     setIsLoading(true);
     setError(null);
     setAiSummary(null);
-    setView('detail');
+    // On detail page we scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     try {
       const { data } = await fetchFullProductData(target, type, category);
       if (data) {
         setSelectedProduct(data);
+        setView('detail');
         
         const prodCategory = data.category || 'Tech';
         const prodSlug = data.product_slug || data.id;
-        const newPath = `/${prodCategory}/${prodSlug}`;
+        const newHash = `#/${prodCategory}/${prodSlug}`;
         
-        if (window.location.pathname !== newPath) {
-          window.history.pushState({ productId: data.id }, "", newPath);
+        // Update hash without triggering reload
+        if (window.location.hash !== newHash) {
+          window.location.hash = newHash;
         }
 
         if (data.reviews && data.reviews.length > 0) {
@@ -76,11 +78,13 @@ export default function App() {
       } else {
         setSelectedProduct(null);
         setError("Produit introuvable");
+        setView('detail');
       }
     } catch (e) {
       console.error(e);
       setError("Erreur lors de l'analyse");
       setSelectedProduct(null);
+      setView('detail');
     } finally {
       setIsLoading(false);
     }
@@ -88,15 +92,26 @@ export default function App() {
 
   useEffect(() => {
     const handleRouting = () => {
-      const path = window.location.pathname;
-      const parts = path.split('/').filter(Boolean);
+      // Logic for Hash-based routing to support refresh on static hosting
+      const hash = window.location.hash;
+      const cleanHash = hash.startsWith('#/') ? hash.slice(2) : hash.startsWith('#') ? hash.slice(1) : hash;
+      const parts = cleanHash.split('/').filter(Boolean);
       
       if (parts.length >= 2) {
+        // Assume [category]/[product_slug]
         const [category, slug] = parts;
         handleSearch(slug, 'slug', category);
-      } else if (parts.length === 1 && ['privacy', 'cookies', 'terms', 'analyses-ia', 'comparateur', 'api-pro', 'contact'].includes(parts[0])) {
-        setView(parts[0] as ViewState);
-        setIsLoading(false);
+      } else if (parts.length === 1) {
+        const page = parts[0] as ViewState;
+        if (['privacy', 'cookies', 'terms', 'analyses-ia', 'comparateur', 'api-pro', 'contact'].includes(page)) {
+          setView(page);
+          setIsLoading(false);
+          setSelectedProduct(null);
+        } else {
+          // Fallback to home if unknown single part
+          setView('home');
+          loadHomeData();
+        }
       } else {
         setView('home');
         loadHomeData();
@@ -104,16 +119,14 @@ export default function App() {
     };
 
     handleRouting();
-    window.addEventListener('popstate', handleRouting);
-    return () => window.removeEventListener('popstate', handleRouting);
+    window.addEventListener('hashchange', handleRouting);
+    return () => window.removeEventListener('hashchange', handleRouting);
   }, [handleSearch, loadHomeData]);
 
   const navigateTo = (newView: ViewState) => {
-    setView(newView);
-    const path = newView === 'home' ? '/' : `/${newView}`;
-    window.history.pushState({}, "", path);
+    const hash = newView === 'home' ? '#/' : `#/${newView}`;
+    window.location.hash = hash;
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    if (newView === 'home') loadHomeData();
   };
 
   const getAvatarColor = (name: string) => {

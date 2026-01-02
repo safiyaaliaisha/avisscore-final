@@ -23,18 +23,65 @@ export const fetchHomeProducts = async (limit = 4): Promise<Product[]> => {
 
 /**
  * Récupère les derniers avis réels de la communauté (table reviews)
- * Jointure avec 'products' incluant le slug et la catégorie pour le routage.
+ * Fallback : Si aucune donnée dans 'reviews', récupère les avis marchands (Rakuten, Fnac, etc.) 
+ * directement depuis la table 'products'.
  */
 export const fetchLatestCommunityReviews = async (limit = 3): Promise<any[]> => {
   try {
+    // 1. Tentative de récupération des avis utilisateurs réels de la table dédiée
     const { data, error } = await supabase
       .from('reviews')
       .select('*, products(name, image_url, category, product_slug)')
       .order('created_at', { ascending: false })
       .limit(limit);
 
-    if (error) throw error;
-    return data || [];
+    // 2. Fallback intelligent : Si pas d'avis communautaires, on extrait les avis marchands des produits
+    if (error || !data || data.length === 0) {
+      // On cherche des produits qui ont au moins un avis marchand (Rakuten en priorité)
+      const { data: prodData } = await supabase
+        .from('products')
+        .select('name, image_url, category, product_slug, rakuten_rev, fnac_rev, darty_rev, review_text, created_at, score, rating')
+        .or('rakuten_rev.neq.null,fnac_rev.neq.null,review_text.neq.null')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      
+      if (prodData && prodData.length > 0) {
+        return prodData.map((p, i) => {
+          // Choix de la source de l'avis : Priorité Rakuten selon la demande
+          let source = "Expert Avisscore";
+          let reviewText = p.review_text || "";
+          let author = "Verdict Expert";
+
+          if (p.rakuten_rev) {
+            reviewText = p.rakuten_rev;
+            source = "Rakuten";
+            author = "Client Rakuten";
+          } else if (p.fnac_rev) {
+            reviewText = p.fnac_rev;
+            source = "Fnac";
+            author = "Client Fnac";
+          }
+
+          return {
+            id: `merchant-rev-${i}`,
+            author_name: author,
+            review_text: reviewText,
+            rating: p.score || p.rating || 4,
+            created_at: p.created_at || new Date().toISOString(),
+            source: source,
+            products: {
+              name: p.name,
+              image_url: p.image_url,
+              category: p.category,
+              product_slug: p.product_slug
+            }
+          };
+        });
+      }
+      return [];
+    }
+    
+    return data;
   } catch (error) {
     console.error("Erreur fetchLatestCommunityReviews:", error);
     return [];
@@ -51,13 +98,11 @@ export const fetchFullProductData = async (
   category?: string
 ): Promise<{ data: Product | null; error: any }> => {
   try {
-    // On cible explicitement la table public.products
     let query = supabase.from('products').select('*, reviews(*)');
     
     if (type === 'id') {
       query = query.eq('id', identifier);
     } else if (type === 'slug') {
-      // Utilisation de ilike pour une correspondance exacte mais insensible à la casse
       query = query.ilike('product_slug', identifier);
       if (category) {
         query = query.ilike('category', category);
@@ -69,7 +114,6 @@ export const fetchFullProductData = async (
     const { data, error } = await query.maybeSingle();
 
     if (error) {
-      console.warn("Erreur fetch logic, tentative fallback...", error);
       let fallbackQuery = supabase.from('products').select('*');
       if (type === 'id') fallbackQuery = fallbackQuery.eq('id', identifier);
       else if (type === 'slug') fallbackQuery = fallbackQuery.ilike('product_slug', identifier);
