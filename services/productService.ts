@@ -65,14 +65,13 @@ export const fetchLatestCommunityReviews = async (limit = 4): Promise<any[]> => 
 
     // Mapping des données vers le format attendu par le composant Review
     return prodData.map((p, i) => {
-      const source = p.fnac_rev ? "Fnac" : "Darty";
       const rawText = p.fnac_rev || p.darty_rev || "";
       // Extraction d'un court extrait
       const extract = rawText.length > 160 ? rawText.substring(0, 157) + "..." : rawText;
 
       return {
         id: `recent-product-rev-${i}`,
-        author_name: `Acheteur ${source}`,
+        author_name: "Acheteur vérifié", // Remplacé "Acheteur Fnac/Darty" par "Acheteur vérifié"
         review_text: extract,
         rating: p.rating || 4, // Utilise la colonne rating de la DB
         created_at: p.created_at || new Date().toISOString(),

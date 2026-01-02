@@ -51,7 +51,7 @@ const getAvatarColor = (name: string) => {
 
 const ProductReviewCard: React.FC<{ review: Partial<Review> & { isAI?: boolean } }> = ({ review }) => {
   const source = review.source || (review.isAI ? "Analyse IA" : "Communauté");
-  const author = review.author_name || (review.isAI ? "Expert Avisscore" : "Acheteur");
+  const author = review.author_name || (review.isAI ? "Expert Avisscore" : "Acheteur vérifié");
   
   const sourceColors: Record<string, string> = {
     fnac: 'border-amber-500/30 hover:bg-amber-500/5',
@@ -113,10 +113,10 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
   topReviews = [...realReviews];
 
   const merchantReviews = [
-    { source: 'Fnac', text: product.fnac_rev, author: 'Client Fnac' },
-    { source: 'Darty', text: product.darty_rev, author: 'Client Darty' },
-    { source: 'Boulanger', text: product.boulanger_rev, author: 'Client Boulanger' },
-    { source: 'Rakuten', text: product.rakuten_rev, author: 'Acheteur Rakuten' }
+    { source: 'Fnac', text: product.fnac_rev, author: 'Acheteur vérifié' },
+    { source: 'Darty', text: product.darty_rev, author: 'Acheteur vérifié' },
+    { source: 'Boulanger', text: product.boulanger_rev, author: 'Acheteur vérifié' },
+    { source: 'Rakuten', text: product.rakuten_rev, author: 'Acheteur vérifié' }
   ].filter(r => r.text && r.text.trim() !== '');
 
   merchantReviews.forEach((m, idx) => {
