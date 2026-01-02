@@ -107,14 +107,11 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
   const pointsFaibles = Array.isArray(summary?.points_faibles) && summary.points_faibles.length > 0 ? summary.points_faibles : (Array.isArray(product?.points_faibles) ? product.points_faibles : []);
   const ficheTechnique = Array.isArray(summary?.fiche_technique) && summary.fiche_technique.length > 0 ? summary.fiche_technique : (Array.isArray(product?.fiche_technique) ? product.fiche_technique : []);
   
-  // LOGIQUE DE RÉCUPÉRATION DES AVIS (Table Supabase products columns: fnac_rev, darty_rev, etc.)
   let topReviews: any[] = [];
   
-  // 1. On vérifie d'abord les avis réels de la communauté (table reviews liée)
   const realReviews = Array.isArray(product?.reviews) ? product.reviews : [];
   topReviews = [...realReviews];
 
-  // 2. On ajoute les avis marchands extraits de la table products (fnac_rev, darty_rev, boulanger_rev, rakuten_rev)
   const merchantReviews = [
     { source: 'Fnac', text: product.fnac_rev, author: 'Client Fnac' },
     { source: 'Darty', text: product.darty_rev, author: 'Client Darty' },
@@ -128,14 +125,13 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
         id: `merchant-${m.source}-${idx}`,
         author_name: m.author,
         review_text: m.text,
-        rating: 4.5, // Note par défaut pour les marchands
+        rating: 4.5,
         source: m.source,
         isAI: false
       });
     }
   });
 
-  // 3. Si on a toujours moins de 3, on complète avec les synthèses IA (Gemini)
   if (topReviews.length < 3 && summary?.review_text) {
     const aiTexts = summary.review_text;
     for (let i = 0; i < aiTexts.length && topReviews.length < 3; i++) {
@@ -150,7 +146,6 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
     }
   }
 
-  // 4. Fallback final sur le verdict expert global si vraiment vide
   if (topReviews.length < 3) {
     const fallbackText = product.review_text || product.description || "Analyse technique exhaustive en attente de validation finale par nos experts.";
     topReviews.push({
@@ -163,15 +158,16 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
     });
   }
 
-  // On limite à exactement 3 pour garder l'esthétique de la grille
   topReviews = topReviews.slice(0, 3);
+
+  // Construction de l'URL de routage externe selon les consignes
+  const externalUrl = `https://avisscore.com/${product.category || 'Tech'}/${product.product_slug || ''}`;
 
   if (!product) return null;
 
   return (
     <div className="max-w-6xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-1000">
       
-      {/* SECTION AVIS PRODUIT - DYNAMIQUE & REMPLIE */}
       <div className="bg-white p-8 md:p-12 rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/50 relative overflow-hidden">
         <div className="absolute top-0 right-0 p-12 opacity-[0.02] text-[15rem] text-slate-900 pointer-events-none -rotate-12 translate-x-20 -translate-y-20">
           <i className="fas fa-comments"></i>
@@ -222,9 +218,6 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
               <i className="fas fa-layer-group text-blue-600"></i>
               Analyse <span className="text-blue-600 italic">8K Digital</span>
             </h2>
-            <div className="px-4 py-1.5 bg-slate-900 rounded-full border border-blue-500/30">
-              <span className="text-[10px] font-black text-white uppercase tracking-widest animate-pulse">Scanning Data...</span>
-            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-auto relative z-10">
@@ -287,6 +280,19 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
             ) : (
               <div className="text-slate-200 text-6xl"><i className="fas fa-image"></i></div>
             )}
+          </div>
+          
+          {/* Bouton de redirection externe suivant le routing strict */}
+          <div className="mt-8 w-full px-4 relative z-20">
+            <a 
+              href={externalUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-3 w-full bg-[#0F172A] text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-2xl hover:bg-blue-600 hover:-translate-y-1 transition-all duration-300 active:scale-95 group"
+            >
+              Consulter l'offre
+              <i className="fas fa-external-link-alt text-blue-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"></i>
+            </a>
           </div>
         </div>
       </div>

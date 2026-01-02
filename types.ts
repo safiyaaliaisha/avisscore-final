@@ -28,6 +28,7 @@ export interface Product {
   image_url: string;
   price?: number;
   category?: string;
+  product_slug?: string;
   created_at?: string;
   // Nouveaux champs intégrés dans la table products
   rating?: number;
