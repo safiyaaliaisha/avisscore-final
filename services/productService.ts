@@ -42,7 +42,7 @@ export const fetchLatestCommunityReviews = async (limit = 3): Promise<any[]> => 
 };
 
 /**
- * Récupère les produits ayant un avis pour la section "Avis Récents" (Ancienne version, conservée pour compatibilité)
+ * Récupère les produits ayant un avis pour la section "Avis Récents"
  */
 export const fetchRecentReviews = async (limit = 3): Promise<Product[]> => {
   try {
@@ -61,14 +61,17 @@ export const fetchRecentReviews = async (limit = 3): Promise<Product[]> => {
 };
 
 /**
- * Récupère un produit complet avec ses avis associés (table reviews).
+ * Récupère un produit complet avec ses avis associés.
+ * Supporte maintenant la recherche par ID, Nom ou Slug.
  */
-export const fetchFullProductData = async (identifier: string, isId: boolean = false): Promise<{ data: Product | null; error: any }> => {
+export const fetchFullProductData = async (identifier: string, type: 'id' | 'slug' | 'name' = 'name'): Promise<{ data: Product | null; error: any }> => {
   try {
     let query = supabase.from('products').select('*, reviews(*)');
     
-    if (isId) {
+    if (type === 'id') {
       query = query.eq('id', identifier);
+    } else if (type === 'slug') {
+      query = query.eq('product_slug', identifier);
     } else {
       query = query.ilike('name', `%${identifier}%`);
     }
@@ -77,9 +80,10 @@ export const fetchFullProductData = async (identifier: string, isId: boolean = f
 
     if (error) {
       console.warn("Erreur lors de la récupération avec jointure reviews, essai sans jointure...", error);
-      const fallbackQuery = isId 
-        ? supabase.from('products').select('*').eq('id', identifier)
-        : supabase.from('products').select('*').ilike('name', `%${identifier}%`);
+      let fallbackQuery = supabase.from('products').select('*');
+      if (type === 'id') fallbackQuery = fallbackQuery.eq('id', identifier);
+      else if (type === 'slug') fallbackQuery = fallbackQuery.eq('product_slug', identifier);
+      else fallbackQuery = fallbackQuery.ilike('name', `%${identifier}%`);
       
       const { data: fbData, error: fbError } = await fallbackQuery.maybeSingle();
       if (fbError || !fbData) return { data: null, error: fbError || 'Produit non trouvé' };

@@ -160,8 +160,11 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
 
   topReviews = topReviews.slice(0, 3);
 
-  // Construction de l'URL de routage externe selon les consignes
-  const externalUrl = `https://avisscore.com/${product.category || 'Tech'}/${product.product_slug || ''}`;
+  // ROUTING LOGIC STRICTE: https://avisscore.com/[category]/[product_slug]
+  // On utilise les valeurs brutes de Supabase sans nettoyage (No trim, no lowercase, no prefix/suffix)
+  const category = product.category || 'Tech';
+  const slug = product.product_slug || '';
+  const externalUrl = `https://avisscore.com/${category}/${slug}`;
 
   if (!product) return null;
 
@@ -199,12 +202,6 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
           {topReviews.map((rev) => (
             <ProductReviewCard key={rev.id} review={rev} />
           ))}
-          {topReviews.length === 0 && (
-             <div className="col-span-full py-16 text-center bg-slate-50/50 rounded-[2rem] border border-dashed border-slate-200">
-                <i className="fas fa-circle-notch fa-spin text-blue-500 text-3xl mb-4"></i>
-                <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Génération des avis marchands...</p>
-             </div>
-          )}
         </div>
       </div>
 
@@ -232,11 +229,11 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
                 </div>
               </div>
               <ul className="space-y-4">
-                {pointsForts.length > 0 ? pointsForts.map((p, i) => (
+                {pointsForts.map((p, i) => (
                   <li key={i} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-emerald-500/30 hover:shadow-emerald-500/10 hover:-translate-y-1 transition-all duration-300 group/item border-l-4 border-l-emerald-500">
                     <span className="text-sm font-bold text-slate-700 leading-tight">{String(p)}</span>
                   </li>
-                )) : <li className="text-slate-400 text-xs italic">Chargement des données...</li>}
+                ))}
               </ul>
             </div>
 
@@ -251,11 +248,11 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
                 </div>
               </div>
               <ul className="space-y-4">
-                {pointsFaibles.length > 0 ? pointsFaibles.map((p, i) => (
+                {pointsFaibles.map((p, i) => (
                   <li key={i} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-rose-500/30 hover:shadow-rose-500/10 hover:-translate-y-1 transition-all duration-300 group/item border-l-4 border-l-rose-500">
                     <span className="text-sm font-bold text-slate-700 leading-tight">{String(p)}</span>
                   </li>
-                )) : <li className="text-slate-400 text-xs italic">Chargement des données...</li>}
+                ))}
               </ul>
             </div>
           </div>
@@ -282,18 +279,23 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
             )}
           </div>
           
-          {/* Bouton de redirection externe suivant le routing strict */}
-          <div className="mt-8 w-full px-4 relative z-20">
-            <a 
-              href={externalUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-3 w-full bg-[#0F172A] text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-2xl hover:bg-blue-600 hover:-translate-y-1 transition-all duration-300 active:scale-95 group"
-            >
-              Consulter l'offre
-              <i className="fas fa-external-link-alt text-blue-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"></i>
-            </a>
-          </div>
+          {/* BOUTON EXTERNE AVEC ROUTING STRICT */}
+          {slug && (
+            <div className="mt-8 w-full px-4 relative z-20">
+              <a 
+                href={externalUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-3 w-full bg-[#0F172A] text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-2xl hover:bg-blue-600 hover:-translate-y-1 transition-all duration-300 active:scale-95 group"
+              >
+                Consulter l'offre
+                <i className="fas fa-external-link-alt text-blue-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"></i>
+              </a>
+              <div className="mt-3 text-center">
+                <span className="text-[8px] text-slate-400 font-black uppercase tracking-widest">Source: {category}</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -310,14 +312,10 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
                 </div>
                 Spécifications <span className="text-blue-500 italic">Ultra</span>
               </h3>
-              <p className="text-[11px] font-black text-blue-400/60 uppercase tracking-[0.5em] mt-2 flex items-center gap-3">
-                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping"></span>
-                Certification High-Fidelity 8K
-              </p>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 relative z-10">
-            {ficheTechnique.length > 0 ? ficheTechnique.map((f, i) => {
+            {ficheTechnique.map((f, i) => {
               const parts = String(f).split(':');
               const keyName = parts[0]?.trim() || "Module";
               const valueName = parts.slice(1).join(':').trim() || "Information";
@@ -338,11 +336,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
                   </div>
                 </div>
               );
-            }) : (
-              <div className="col-span-full py-10 text-center text-slate-600 font-black uppercase tracking-widest italic border-2 border-dashed border-white/5 rounded-3xl">
-                Analyse Technique en cours...
-              </div>
-            )}
+            })}
           </div>
         </div>
 
@@ -351,9 +345,6 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
             <i className="fas fa-gavel text-blue-600"></i> Verdict Expert
           </h3>
           <div className="flex-1 relative">
-            <div className="absolute top-0 left-0 w-8 h-8 opacity-[0.05] text-blue-900 text-6xl -translate-x-4 -translate-y-4">
-              <i className="fas fa-quote-left"></i>
-            </div>
             <p className="text-slate-600 leading-relaxed text-lg font-medium italic relative z-10">
               {summary?.review_text?.[0] || product?.review_text || product?.description || "L'analyse française certifiée est en cours de déploiement."}
             </p>

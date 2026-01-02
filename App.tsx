@@ -62,7 +62,8 @@ export default function App() {
     setView('detail');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     try {
-      const { data } = await fetchFullProductData(target, isId);
+      // Fix: Convert boolean isId to 'id' | 'name' for fetchFullProductData
+      const { data } = await fetchFullProductData(target, isId ? 'id' : 'name');
       if (data) {
         setSelectedProduct(data);
         if (data.reviews && data.reviews.length > 0) {
