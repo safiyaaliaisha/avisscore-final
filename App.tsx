@@ -36,7 +36,7 @@ export default function App() {
     try {
       const [prods, revs] = await Promise.all([
         fetchHomeProducts(4),
-        fetchLatestCommunityReviews(4) // Fetch 4 reviews as requested
+        fetchLatestCommunityReviews(4)
       ]);
       setPopularProducts(Array.isArray(prods) ? prods : []);
       setCommunityReviews(Array.isArray(revs) ? revs : []);
@@ -120,6 +120,12 @@ export default function App() {
 
   const navigateTo = (newView: ViewState) => {
     const hash = newView === 'home' ? '#/' : `#/${newView}`;
+    // Si on retourne à l'accueil, on nettoie les états immédiatement pour éviter le flash
+    if (newView === 'home') {
+      setSelectedProduct(null);
+      setError(null);
+      setAiSummary(null);
+    }
     window.location.hash = hash;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -139,13 +145,19 @@ export default function App() {
     return `Il y a ${Math.floor(diffInHours / 24)}j`;
   };
 
+  // Helper pour vérifier si on est sur une route produit
+  const isDetailRoute = () => {
+    const parts = window.location.hash.split('/').filter(Boolean);
+    return parts.length >= 2;
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
       <nav className="bg-[#0F172A] h-20 flex items-center sticky top-0 z-50 shadow-2xl shadow-slate-900/10 shrink-0">
         <div className="max-w-7xl mx-auto px-6 w-full flex justify-between items-center">
           <div 
             className="flex items-center gap-3 cursor-pointer group" 
-            onClick={() => { navigateTo('home'); setQuery(''); setSelectedProduct(null); setAiSummary(null); setError(null); }}
+            onClick={() => { navigateTo('home'); setQuery(''); }}
           >
             <div className="relative">
               <div className="w-10 h-10 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
@@ -304,25 +316,29 @@ export default function App() {
         {view === 'detail' && (
           <main className="max-w-7xl mx-auto px-6 py-12 animate-in slide-in-from-bottom-6 duration-700">
             {!selectedProduct ? (
-              <div className="text-center py-48 bg-white rounded-[3rem] border border-slate-100 shadow-2xl">
-                {isLoading ? (
-                   <div className="flex flex-col items-center gap-8">
-                      <div className="w-20 h-20 border-[6px] border-blue-600 border-t-transparent rounded-full animate-spin shadow-xl"></div>
-                      <div className="space-y-2">
-                        <p className="text-slate-900 font-black text-2xl tracking-tighter uppercase">Analyse en cours...</p>
-                        <p className="text-slate-400 font-bold tracking-widest text-xs uppercase">Extraction des Consensus</p>
+              // On vérifie si on est censé être sur une page détail avant d'afficher l'erreur
+              // Cela évite l'affichage de "Produit introuvable" pendant le switch de view vers "home"
+              isDetailRoute() ? (
+                <div className="text-center py-48 bg-white rounded-[3rem] border border-slate-100 shadow-2xl">
+                  {isLoading ? (
+                     <div className="flex flex-col items-center gap-8">
+                        <div className="w-20 h-20 border-[6px] border-blue-600 border-t-transparent rounded-full animate-spin shadow-xl"></div>
+                        <div className="space-y-2">
+                          <p className="text-slate-900 font-black text-2xl tracking-tighter uppercase">Analyse en cours...</p>
+                          <p className="text-slate-400 font-bold tracking-widest text-xs uppercase">Extraction des Consensus</p>
+                        </div>
+                     </div>
+                  ) : (
+                    <>
+                      <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-8 text-4xl">
+                        <i className="fas fa-exclamation-triangle"></i>
                       </div>
-                   </div>
-                ) : (
-                  <>
-                    <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-8 text-4xl">
-                      <i className="fas fa-exclamation-triangle"></i>
-                    </div>
-                    <h2 className="text-4xl font-black mb-6 text-slate-900">{error || "Produit introuvable"}</h2>
-                    <button onClick={() => navigateTo('home')} className="bg-[#0F172A] text-white px-12 py-5 rounded-2xl font-black uppercase tracking-widest shadow-2xl hover:bg-blue-600 transition-all active:scale-95">Retour</button>
-                  </>
-                )}
-              </div>
+                      <h2 className="text-4xl font-black mb-6 text-slate-900">{error || "Produit introuvable"}</h2>
+                      <button onClick={() => navigateTo('home')} className="bg-[#0F172A] text-white px-12 py-5 rounded-2xl font-black uppercase tracking-widest shadow-2xl hover:bg-blue-600 transition-all active:scale-95">Retour</button>
+                    </>
+                  )}
+                </div>
+              ) : null
             ) : (
               <div className="space-y-12">
                 <ReviewCard 
