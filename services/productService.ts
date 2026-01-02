@@ -23,13 +23,13 @@ export const fetchHomeProducts = async (limit = 4): Promise<Product[]> => {
 
 /**
  * Récupère les derniers avis réels de la communauté (table reviews)
- * Jointure avec 'products' pour afficher le nom du produit concerné.
+ * Jointure avec 'products' incluant le slug et la catégorie pour le routage.
  */
 export const fetchLatestCommunityReviews = async (limit = 3): Promise<any[]> => {
   try {
     const { data, error } = await supabase
       .from('reviews')
-      .select('*, products(name, image_url)')
+      .select('*, products(name, image_url, category, product_slug)')
       .order('created_at', { ascending: false })
       .limit(limit);
 

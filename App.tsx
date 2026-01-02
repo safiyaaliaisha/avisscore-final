@@ -178,13 +178,12 @@ export default function App() {
                   ))
                 ) : (
                   popularProducts.map((p) => {
-                    const productUrl = `https://avisscore.com/${p.category || 'Tech'}/${p.product_slug || ''}`;
+                    const productUrl = p.product_slug ? `https://avisscore.com/${p.category || 'Tech'}/${p.product_slug}` : null;
                     return (
                       <div 
                         key={p.id} 
                         className="bg-white rounded-3xl p-6 border border-slate-100 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 cursor-pointer group flex flex-col items-center text-center relative overflow-hidden" 
                       >
-                        {/* Overlay to handle main action vs external link */}
                         <div className="absolute inset-0 z-0" onClick={() => handleSearch(p.id, true)}></div>
                         
                         <div className="h-40 w-full flex items-center justify-center mb-6 overflow-hidden relative z-10 pointer-events-none">
@@ -198,17 +197,18 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Direct Link Button */}
-                        <a 
-                          href={productUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-auto w-full bg-slate-50 hover:bg-blue-600 hover:text-white text-slate-900 py-3 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all duration-300 relative z-20 flex items-center justify-center gap-2 border border-slate-100"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Consulter l'offre
-                          <i className="fas fa-external-link-alt text-[8px] opacity-70"></i>
-                        </a>
+                        {productUrl && (
+                          <a 
+                            href={productUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-auto w-full bg-slate-50 hover:bg-[#0F172A] hover:text-white text-slate-900 py-3 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all duration-300 relative z-20 flex items-center justify-center gap-2 border border-slate-100"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Consulter l'offre
+                            <i className="fas fa-external-link-alt text-[8px] opacity-70"></i>
+                          </a>
+                        )}
                       </div>
                     );
                   })
@@ -232,38 +232,57 @@ export default function App() {
                   ))
                 ) : (
                   communityReviews.length > 0 ? (
-                    communityReviews.map((rev) => (
-                      <div 
-                        key={rev.id} 
-                        className="bg-white rounded-2xl p-6 border border-slate-100 shadow-xl shadow-slate-200/20 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 cursor-pointer group"
-                        onClick={() => handleSearch(rev.products?.name || '', false)}
-                      >
-                        <div className="flex items-center gap-4 mb-4">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${getAvatarColor(rev.author_name)}`}>
-                            {String(rev.author_name || "A").charAt(0).toUpperCase()}
+                    communityReviews.map((rev) => {
+                      const productSlug = rev.products?.product_slug;
+                      const productCategory = rev.products?.category;
+                      const productUrl = productSlug ? `https://avisscore.com/${productCategory || 'Tech'}/${productSlug}` : null;
+
+                      return (
+                        <div 
+                          key={rev.id} 
+                          className="bg-white rounded-2xl p-6 border border-slate-100 shadow-xl shadow-slate-200/20 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 cursor-pointer group flex flex-col h-full"
+                          onClick={() => handleSearch(rev.products?.name || '', false)}
+                        >
+                          <div className="flex items-center gap-4 mb-4">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${getAvatarColor(rev.author_name)}`}>
+                              {String(rev.author_name || "A").charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-slate-800 text-sm leading-tight">{rev.author_name || "Anonyme"}</h4>
+                              <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">
+                                {formatTimeAgo(rev.created_at)}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="font-bold text-slate-800 text-sm leading-tight">{rev.author_name || "Anonyme"}</h4>
-                            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest">
-                              {formatTimeAgo(rev.created_at)}
-                            </p>
+
+                          <h5 className="font-black text-slate-900 text-base mb-2 truncate group-hover:text-blue-600 transition-colors">
+                            {rev.products?.name || "Produit Tech"}
+                          </h5>
+
+                          <p className="text-slate-500 text-xs leading-relaxed mb-4 line-clamp-3 font-medium italic flex-1">
+                            "{rev.review_text}"
+                          </p>
+
+                          <div className="flex items-center justify-between pt-3 border-t border-slate-50 mt-4">
+                            <div className="flex items-center gap-2">
+                              <StarRating rating={rev.rating} />
+                              <span className="text-slate-900 font-black text-[11px]">{rev.rating}.0</span>
+                            </div>
+                            {productUrl && (
+                              <a 
+                                href={productUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 font-black text-[9px] uppercase tracking-widest flex items-center gap-1.5 hover:underline"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                Offre <i className="fas fa-external-link-alt text-[7px]"></i>
+                              </a>
+                            )}
                           </div>
                         </div>
-
-                        <h5 className="font-black text-slate-900 text-base mb-2 truncate group-hover:text-blue-600 transition-colors">
-                          {rev.products?.name || "Produit Tech"}
-                        </h5>
-
-                        <p className="text-slate-500 text-xs leading-relaxed mb-4 line-clamp-3 font-medium italic">
-                          "{rev.review_text}"
-                        </p>
-
-                        <div className="flex items-center gap-2 pt-3 border-t border-slate-50">
-                          <StarRating rating={rev.rating} />
-                          <span className="text-slate-900 font-black text-[11px]">{rev.rating}.0</span>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="col-span-full py-12 text-center text-slate-400 font-bold uppercase tracking-widest text-xs italic">
                       Aucun avis récent pour le moment.
