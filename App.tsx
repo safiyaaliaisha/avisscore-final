@@ -178,7 +178,11 @@ export default function App() {
                   ))
                 ) : (
                   popularProducts.map((p) => {
-                    const productUrl = p.product_slug ? `https://avisscore.com/${p.category || 'Tech'}/${p.product_slug}` : null;
+                    // Logic strictly as requested: Base URL + Category + / + Slug
+                    const category = p.category || 'Tech';
+                    const slug = p.product_slug || '';
+                    const productUrl = slug ? `https://avisscore.com/${category}/${slug}` : null;
+                    
                     return (
                       <div 
                         key={p.id} 
@@ -202,7 +206,7 @@ export default function App() {
                             href={productUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="mt-auto w-full bg-slate-50 hover:bg-[#0F172A] hover:text-white text-slate-900 py-3 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all duration-300 relative z-20 flex items-center justify-center gap-2 border border-slate-100"
+                            className="mt-auto w-full bg-[#0F172A] hover:bg-blue-600 text-white py-3 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all duration-300 relative z-20 flex items-center justify-center gap-2 border border-slate-100 shadow-lg active:scale-95"
                             onClick={(e) => e.stopPropagation()}
                           >
                             Consulter l'offre
@@ -234,8 +238,8 @@ export default function App() {
                   communityReviews.length > 0 ? (
                     communityReviews.map((rev) => {
                       const productSlug = rev.products?.product_slug;
-                      const productCategory = rev.products?.category;
-                      const productUrl = productSlug ? `https://avisscore.com/${productCategory || 'Tech'}/${productSlug}` : null;
+                      const productCategory = rev.products?.category || 'Tech';
+                      const productUrl = productSlug ? `https://avisscore.com/${productCategory}/${productSlug}` : null;
 
                       return (
                         <div 

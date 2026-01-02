@@ -160,10 +160,11 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
 
   topReviews = topReviews.slice(0, 3);
 
-  // LOGIQUE DE LIEN STRICTE: Base URL + category + / + product_slug
-  const categoryStr = product.category || '';
-  const slugStr = product.product_slug || '';
-  const externalUrl = `https://avisscore.com/${categoryStr}/${slugStr}`;
+  // STRICT LINK LOGIC: Base URL + Category + / + Slug
+  // We use values directly from the DB.
+  const category = product.category || 'Tech';
+  const slug = product.product_slug || '';
+  const externalUrl = slug ? `https://avisscore.com/${category}/${slug}` : '#';
 
   if (!product) return null;
 
@@ -257,8 +258,9 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
           </div>
         </div>
 
-        <div className="lg:col-span-4 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col items-center justify-center relative overflow-hidden group">
-          <div className="mb-8 text-center w-full relative z-10">
+        {/* RIGHT CARD: PRODUCT INFO + LINK BUTTON */}
+        <div className="lg:col-span-4 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col items-center justify-between relative overflow-hidden group">
+          <div className="text-center w-full relative z-10 mb-6">
             <h1 className="text-3xl font-black text-slate-900 tracking-tighter mb-1 line-clamp-2 leading-tight">
               {String(product?.name || 'Produit')}
             </h1>
@@ -266,6 +268,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
               {String(product?.category || "Technologie")}
             </span>
           </div>
+
           <div className="relative w-full aspect-square flex items-center justify-center z-10">
             {product?.image_url ? (
               <img 
@@ -278,23 +281,29 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
             )}
           </div>
           
-          {/* LIEN EXTERNE STRICTEMENT SOUS L'IMAGE */}
-          {slugStr && (
-            <div className="mt-8 w-full px-4 relative z-20">
-              <a 
-                href={externalUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-3 w-full bg-[#0F172A] text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-2xl hover:bg-blue-600 hover:-translate-y-1 transition-all duration-300 active:scale-95 group"
-              >
-                Consulter l'offre
-                <i className="fas fa-external-link-alt text-blue-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"></i>
-              </a>
-              <div className="mt-4 text-center">
-                <span className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em]">Source: {categoryStr}</span>
+          {/* EXTERNAL LINK BUTTON STRICTLY UNDER THE IMAGE */}
+          <div className="w-full px-4 relative z-20 mt-8">
+            {slug ? (
+              <>
+                <a 
+                  href={externalUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-3 w-full bg-[#0F172A] text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-2xl hover:bg-blue-600 hover:-translate-y-1 transition-all duration-300 active:scale-95 group"
+                >
+                  Consulter l'offre
+                  <i className="fas fa-external-link-alt text-blue-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"></i>
+                </a>
+                <div className="mt-4 text-center">
+                  <span className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em]">Source: {category}</span>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Offre indisponible</span>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
