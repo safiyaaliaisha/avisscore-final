@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { fetchFullProductData, fetchHomeProducts, fetchLatestCommunityReviews } from './services/productService';
 import { getAIReviewSummary } from './services/geminiService';
@@ -30,11 +30,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadHomeData();
-  }, []);
-
-  const loadHomeData = async () => {
+  const loadHomeData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -47,43 +43,79 @@ export default function App() {
     } catch (e) {
       console.error(e);
       setError("Erreur de chargement");
-      setPopularProducts([]);
-      setCommunityReviews([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const handleSearch = async (target: string, isId: boolean = false) => {
+  const handleSearch = useCallback(async (target: string, type: 'id' | 'slug' | 'name' = 'name', category?: string) => {
     if (!target.trim()) return;
     setIsLoading(true);
     setError(null);
     setAiSummary(null);
     setView('detail');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
     try {
-      const { data } = await fetchFullProductData(target, isId ? 'id' : 'name');
+      const { data } = await fetchFullProductData(target, type, category);
       if (data) {
         setSelectedProduct(data);
+        
+        // Mise à jour de l'URL pour correspondre au format demandé : /Category/Slug
+        const prodCategory = data.category || 'Tech';
+        const prodSlug = data.product_slug || data.id;
+        const newPath = `/${prodCategory}/${prodSlug}`;
+        
+        if (window.location.pathname !== newPath) {
+          window.history.pushState({ productId: data.id }, "", newPath);
+        }
+
         if (data.reviews && data.reviews.length > 0) {
           const summary = await getAIReviewSummary(data.name, data.reviews);
           if (summary) setAiSummary(summary);
         }
       } else {
         setSelectedProduct(null);
+        setError("Produit introuvable");
       }
     } catch (e) {
       console.error(e);
-      setError("Produit introuvable");
+      setError("Erreur lors de l'analyse");
       setSelectedProduct(null);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const handleRouting = () => {
+      const path = window.location.pathname;
+      const parts = path.split('/').filter(Boolean);
+      
+      // Routage : /[category]/[product_slug]
+      if (parts.length >= 2) {
+        const [category, slug] = parts;
+        handleSearch(slug, 'slug', category);
+      } else if (parts.length === 1 && ['privacy', 'cookies', 'terms', 'analyses-ia', 'comparateur', 'api-pro', 'contact'].includes(parts[0])) {
+        setView(parts[0] as ViewState);
+        setIsLoading(false);
+      } else {
+        setView('home');
+        loadHomeData();
+      }
+    };
+
+    handleRouting();
+    window.addEventListener('popstate', handleRouting);
+    return () => window.removeEventListener('popstate', handleRouting);
+  }, [handleSearch, loadHomeData]);
 
   const navigateTo = (newView: ViewState) => {
     setView(newView);
+    const path = newView === 'home' ? '/' : `/${newView}`;
+    window.history.pushState({}, "", path);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (newView === 'home') loadHomeData();
   };
 
   const getAvatarColor = (name: string) => {
@@ -107,7 +139,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-6 w-full flex justify-between items-center">
           <div 
             className="flex items-center gap-3 cursor-pointer group" 
-            onClick={() => { setView('home'); setQuery(''); setSelectedProduct(null); setAiSummary(null); setError(null); }}
+            onClick={() => { navigateTo('home'); setQuery(''); setSelectedProduct(null); setAiSummary(null); setError(null); }}
           >
             <div className="relative">
               <div className="w-10 h-10 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-110 group-hover:rotate-3 transition-all duration-300">
@@ -178,17 +210,17 @@ export default function App() {
                   ))
                 ) : (
                   popularProducts.map((p) => {
-                    // Logic strictly as requested: Base URL + Category + / + Slug
-                    const category = p.category || 'Tech';
-                    const slug = p.product_slug || '';
-                    const productUrl = slug ? `https://avisscore.com/${category}/${slug}` : null;
+                    // Format strict demandé : https://avisscore.com/[category]/[product_slug]
+                    const cat = p.category || 'Tech';
+                    const slg = p.product_slug || '';
+                    const productUrl = slg ? `https://avisscore.com/${cat}/${slg}` : null;
                     
                     return (
                       <div 
                         key={p.id} 
                         className="bg-white rounded-3xl p-6 border border-slate-100 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 cursor-pointer group flex flex-col items-center text-center relative overflow-hidden" 
                       >
-                        <div className="absolute inset-0 z-0" onClick={() => handleSearch(p.id, true)}></div>
+                        <div className="absolute inset-0 z-0" onClick={() => handleSearch(p.product_slug || p.id, p.product_slug ? 'slug' : 'id', p.category)}></div>
                         
                         <div className="h-40 w-full flex items-center justify-center mb-6 overflow-hidden relative z-10 pointer-events-none">
                           <img src={p.image_url || ''} alt={String(p.name)} className="max-h-full object-contain group-hover:scale-110 transition-transform duration-700" />
@@ -237,15 +269,15 @@ export default function App() {
                 ) : (
                   communityReviews.length > 0 ? (
                     communityReviews.map((rev) => {
-                      const productSlug = rev.products?.product_slug;
-                      const productCategory = rev.products?.category || 'Tech';
-                      const productUrl = productSlug ? `https://avisscore.com/${productCategory}/${productSlug}` : null;
+                      const prodSlug = rev.products?.product_slug;
+                      const prodCategory = rev.products?.category || 'Tech';
+                      const productUrl = prodSlug ? `https://avisscore.com/${prodCategory}/${prodSlug}` : null;
 
                       return (
                         <div 
                           key={rev.id} 
                           className="bg-white rounded-2xl p-6 border border-slate-100 shadow-xl shadow-slate-200/20 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 cursor-pointer group flex flex-col h-full"
-                          onClick={() => handleSearch(rev.products?.name || '', false)}
+                          onClick={() => handleSearch(prodSlug || rev.products?.name || '', prodSlug ? 'slug' : 'name', prodCategory)}
                         >
                           <div className="flex items-center gap-4 mb-4">
                             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${getAvatarColor(rev.author_name)}`}>
@@ -315,8 +347,8 @@ export default function App() {
                     <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-8 text-4xl">
                       <i className="fas fa-exclamation-triangle"></i>
                     </div>
-                    <h2 className="text-4xl font-black mb-6 text-slate-900">Produit introuvable</h2>
-                    <button onClick={() => setView('home')} className="bg-[#0F172A] text-white px-12 py-5 rounded-2xl font-black uppercase tracking-widest shadow-2xl hover:bg-blue-600 transition-all active:scale-95">Retour</button>
+                    <h2 className="text-4xl font-black mb-6 text-slate-900">{error || "Produit introuvable"}</h2>
+                    <button onClick={() => navigateTo('home')} className="bg-[#0F172A] text-white px-12 py-5 rounded-2xl font-black uppercase tracking-widest shadow-2xl hover:bg-blue-600 transition-all active:scale-95">Retour</button>
                   </>
                 )}
               </div>
@@ -328,7 +360,7 @@ export default function App() {
                   relatedProducts={popularProducts.filter(p => p.id !== (selectedProduct?.id)).slice(0, 3)}
                 />
                 <div className="flex justify-center pb-24">
-                  <button onClick={() => setView('home')} className="bg-white border border-slate-200 text-slate-400 font-black uppercase tracking-[0.4em] text-[10px] px-12 py-5 rounded-[2rem] hover:text-blue-600 hover:border-blue-600 shadow-lg hover:shadow-2xl transition-all flex items-center gap-5">
+                  <button onClick={() => navigateTo('home')} className="bg-white border border-slate-200 text-slate-400 font-black uppercase tracking-[0.4em] text-[10px] px-12 py-5 rounded-[2rem] hover:text-blue-600 hover:border-blue-600 shadow-lg hover:shadow-2xl transition-all flex items-center gap-5">
                     <i className="fas fa-arrow-left"></i> Retour au Catalogue
                   </button>
                 </div>
@@ -339,13 +371,13 @@ export default function App() {
 
         {(view === 'privacy' || view === 'cookies' || view === 'terms') && (
           <main className="max-w-4xl mx-auto px-6 py-20 animate-in fade-in slide-in-from-bottom-6 duration-700">
-             <LegalPage type={view} onBack={() => setView('home')} />
+             <LegalPage type={view} onBack={() => navigateTo('home')} />
           </main>
         )}
 
         {(view === 'analyses-ia' || view === 'comparateur' || view === 'api-pro') && (
           <main className="max-w-6xl mx-auto px-6 py-20 animate-in fade-in duration-700">
-            <FeaturePage type={view} onBack={() => setView('home')} />
+            <FeaturePage type={view} onBack={() => navigateTo('home')} />
           </main>
         )}
 
@@ -369,7 +401,7 @@ export default function App() {
 
               <div className="mt-16 pt-10 border-t border-slate-100 flex justify-center">
                 <button 
-                  onClick={() => setView('home')}
+                  onClick={() => navigateTo('home')}
                   className="bg-[#0F172A] text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-600 transition-all flex items-center gap-4 group shadow-xl active:scale-95"
                 >
                   <i className="fas fa-arrow-left group-hover:-translate-x-1 transition-transform"></i>

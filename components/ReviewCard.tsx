@@ -160,11 +160,11 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
 
   topReviews = topReviews.slice(0, 3);
 
-  // STRICT LINK LOGIC: Base URL + Category + / + Slug
-  // We use values directly from the DB.
-  const category = product.category || 'Tech';
-  const slug = product.product_slug || '';
-  const externalUrl = slug ? `https://avisscore.com/${category}/${slug}` : '#';
+  // LOGIQUE DE LIEN STRICTE : Base URL + category (depuis DB) + / + product_slug (depuis DB)
+  // On ne modifie pas la casse ni les caractères pour respecter l'état exact de la DB.
+  const prodCategory = product.category || 'Tech';
+  const prodSlug = product.product_slug || '';
+  const externalUrl = prodSlug ? `https://avisscore.com/${prodCategory}/${prodSlug}` : '#';
 
   if (!product) return null;
 
@@ -225,7 +225,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Points Forts</h3>
-                  <p className="text-[9px] text-emerald-500 font-black uppercase tracking-[0.2em] mt-1">Avantages Validés</p>
+                  <p className="text-[9px] text-emerald-500 font-black uppercase tracking-[0.2em] leading-none mt-1">Avantages Validés</p>
                 </div>
               </div>
               <ul className="space-y-4">
@@ -244,7 +244,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Points Faibles</h3>
-                  <p className="text-[9px] text-rose-500 font-black uppercase tracking-[0.2em] mt-1">Limites Systèmes</p>
+                  <p className="text-[9px] text-rose-500 font-black uppercase tracking-[0.2em] leading-none mt-1">Limites Systèmes</p>
                 </div>
               </div>
               <ul className="space-y-4">
@@ -258,9 +258,9 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
           </div>
         </div>
 
-        {/* RIGHT CARD: PRODUCT INFO + LINK BUTTON */}
+        {/* CARTE PRODUIT AVEC BOUTON DE LIEN STRICTEMENT SOUS L'IMAGE */}
         <div className="lg:col-span-4 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col items-center justify-between relative overflow-hidden group">
-          <div className="text-center w-full relative z-10 mb-6">
+          <div className="mb-6 text-center w-full relative z-10">
             <h1 className="text-3xl font-black text-slate-900 tracking-tighter mb-1 line-clamp-2 leading-tight">
               {String(product?.name || 'Produit')}
             </h1>
@@ -268,7 +268,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
               {String(product?.category || "Technologie")}
             </span>
           </div>
-
+          
           <div className="relative w-full aspect-square flex items-center justify-center z-10">
             {product?.image_url ? (
               <img 
@@ -281,9 +281,9 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
             )}
           </div>
           
-          {/* EXTERNAL LINK BUTTON STRICTLY UNDER THE IMAGE */}
-          <div className="w-full px-4 relative z-20 mt-8">
-            {slug ? (
+          {/* BOUTON EXTERNE AU FORMAT DEMANDE : /Category/Slug */}
+          <div className="mt-8 w-full px-4 relative z-20">
+            {prodSlug ? (
               <>
                 <a 
                   href={externalUrl} 
@@ -295,12 +295,12 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
                   <i className="fas fa-external-link-alt text-blue-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"></i>
                 </a>
                 <div className="mt-4 text-center">
-                  <span className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em]">Source: {category}</span>
+                  <span className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em]">Source: {prodCategory}</span>
                 </div>
               </>
             ) : (
               <div className="text-center py-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Offre indisponible</span>
+                 <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">Offre Indisponible</span>
               </div>
             )}
           </div>
