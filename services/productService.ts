@@ -22,66 +22,68 @@ export const fetchHomeProducts = async (limit = 4): Promise<Product[]> => {
 };
 
 /**
- * Récupère les derniers avis réels de la communauté (table reviews)
- * Fallback : Si aucune donnée dans 'reviews', récupère les avis marchands (Rakuten, Fnac, etc.) 
- * directement depuis la table 'products'.
+ * Récupère les derniers avis.
+ * Selon la demande utilisateur : Récupère les 4 derniers produits et utilise 
+ * fnac_rev ou darty_rev comme contenu d'avis, avec la colonne rating pour la note.
  */
-export const fetchLatestCommunityReviews = async (limit = 3): Promise<any[]> => {
+export const fetchLatestCommunityReviews = async (limit = 4): Promise<any[]> => {
   try {
-    // 1. Tentative de récupération des avis utilisateurs réels de la table dédiée
-    const { data, error } = await supabase
-      .from('reviews')
-      .select('*, products(name, image_url, category, product_slug)')
+    // On récupère d'abord les produits pour extraire les revues marchandes comme "avis récents"
+    const { data: prodData, error } = await supabase
+      .from('products')
+      .select('name, image_url, category, product_slug, fnac_rev, darty_rev, rating, created_at')
+      .or('fnac_rev.neq.null,darty_rev.neq.null')
       .order('created_at', { ascending: false })
       .limit(limit);
 
-    // 2. Fallback intelligent : Si pas d'avis communautaires, on extrait les avis marchands des produits
-    if (error || !data || data.length === 0) {
-      // On cherche des produits qui ont au moins un avis marchand (Rakuten en priorité)
-      const { data: prodData } = await supabase
+    if (error || !prodData || prodData.length === 0) {
+      // Fallback au cas où même fnac/darty sont vides (on prend le verdict expert)
+      const { data: fallbackData } = await supabase
         .from('products')
-        .select('name, image_url, category, product_slug, rakuten_rev, fnac_rev, darty_rev, review_text, created_at, score, rating')
-        .or('rakuten_rev.neq.null,fnac_rev.neq.null,review_text.neq.null')
+        .select('name, image_url, category, product_slug, review_text, rating, created_at')
+        .not('review_text', 'is', null)
         .order('created_at', { ascending: false })
         .limit(limit);
-      
-      if (prodData && prodData.length > 0) {
-        return prodData.map((p, i) => {
-          // Choix de la source de l'avis : Priorité Rakuten selon la demande
-          let source = "Expert Avisscore";
-          let reviewText = p.review_text || "";
-          let author = "Verdict Expert";
 
-          if (p.rakuten_rev) {
-            reviewText = p.rakuten_rev;
-            source = "Rakuten";
-            author = "Client Rakuten";
-          } else if (p.fnac_rev) {
-            reviewText = p.fnac_rev;
-            source = "Fnac";
-            author = "Client Fnac";
+      if (fallbackData) {
+        return fallbackData.map((p, i) => ({
+          id: `expert-rev-${i}`,
+          author_name: "Verdict Expert",
+          review_text: p.review_text?.substring(0, 150) + "...",
+          rating: p.rating || 5,
+          created_at: p.created_at || new Date().toISOString(),
+          products: {
+            name: p.name,
+            image_url: p.image_url,
+            category: p.category,
+            product_slug: p.product_slug
           }
-
-          return {
-            id: `merchant-rev-${i}`,
-            author_name: author,
-            review_text: reviewText,
-            rating: p.score || p.rating || 4,
-            created_at: p.created_at || new Date().toISOString(),
-            source: source,
-            products: {
-              name: p.name,
-              image_url: p.image_url,
-              category: p.category,
-              product_slug: p.product_slug
-            }
-          };
-        });
+        }));
       }
       return [];
     }
-    
-    return data;
+
+    // Mapping des données vers le format attendu par le composant Review
+    return prodData.map((p, i) => {
+      const source = p.fnac_rev ? "Fnac" : "Darty";
+      const rawText = p.fnac_rev || p.darty_rev || "";
+      // Extraction d'un court extrait
+      const extract = rawText.length > 160 ? rawText.substring(0, 157) + "..." : rawText;
+
+      return {
+        id: `recent-product-rev-${i}`,
+        author_name: `Acheteur ${source}`,
+        review_text: extract,
+        rating: p.rating || 4, // Utilise la colonne rating de la DB
+        created_at: p.created_at || new Date().toISOString(),
+        products: {
+          name: p.name,
+          image_url: p.image_url,
+          category: p.category,
+          product_slug: p.product_slug
+        }
+      };
+    });
   } catch (error) {
     console.error("Erreur fetchLatestCommunityReviews:", error);
     return [];
@@ -90,7 +92,6 @@ export const fetchLatestCommunityReviews = async (limit = 3): Promise<any[]> => 
 
 /**
  * Récupère un produit complet avec ses avis associés.
- * Recherche exacte et insensible à la casse sur product_slug.
  */
 export const fetchFullProductData = async (
   identifier: string, 

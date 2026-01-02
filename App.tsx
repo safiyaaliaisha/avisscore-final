@@ -36,7 +36,7 @@ export default function App() {
     try {
       const [prods, revs] = await Promise.all([
         fetchHomeProducts(4),
-        fetchLatestCommunityReviews(3)
+        fetchLatestCommunityReviews(4) // Fetch 4 reviews as requested
       ]);
       setPopularProducts(Array.isArray(prods) ? prods : []);
       setCommunityReviews(Array.isArray(revs) ? revs : []);
@@ -53,7 +53,6 @@ export default function App() {
     setIsLoading(true);
     setError(null);
     setAiSummary(null);
-    // On detail page we scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     try {
@@ -66,7 +65,6 @@ export default function App() {
         const prodSlug = data.product_slug || data.id;
         const newHash = `#/${prodCategory}/${prodSlug}`;
         
-        // Update hash without triggering reload
         if (window.location.hash !== newHash) {
           window.location.hash = newHash;
         }
@@ -92,13 +90,11 @@ export default function App() {
 
   useEffect(() => {
     const handleRouting = () => {
-      // Logic for Hash-based routing to support refresh on static hosting
       const hash = window.location.hash;
       const cleanHash = hash.startsWith('#/') ? hash.slice(2) : hash.startsWith('#') ? hash.slice(1) : hash;
       const parts = cleanHash.split('/').filter(Boolean);
       
       if (parts.length >= 2) {
-        // Assume [category]/[product_slug]
         const [category, slug] = parts;
         handleSearch(slug, 'slug', category);
       } else if (parts.length === 1) {
@@ -108,7 +104,6 @@ export default function App() {
           setIsLoading(false);
           setSelectedProduct(null);
         } else {
-          // Fallback to home if unknown single part
           setView('home');
           loadHomeData();
         }
@@ -246,13 +241,13 @@ export default function App() {
               <div className="flex items-center justify-between mb-12">
                 <div className="space-y-1">
                   <h2 className="text-3xl font-black text-slate-900 tracking-tight">Avis Récents</h2>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Dernières interactions de la communauté</p>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Basé sur les derniers retours marchands</p>
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                 {isLoading ? (
-                  [...Array(3)].map((_, i) => (
+                  [...Array(4)].map((_, i) => (
                     <div key={i} className="bg-white rounded-2xl p-8 border border-slate-100 animate-pulse h-48"></div>
                   ))
                 ) : (
@@ -278,11 +273,11 @@ export default function App() {
                             </div>
                           </div>
 
-                          <h5 className="font-black text-slate-900 text-base mb-2 truncate group-hover:text-blue-600 transition-colors">
+                          <h5 className="font-black text-slate-900 text-[13px] mb-2 truncate group-hover:text-blue-600 transition-colors">
                             {rev.products?.name || "Produit Tech"}
                           </h5>
 
-                          <p className="text-slate-500 text-xs leading-relaxed mb-4 line-clamp-3 font-medium italic flex-1">
+                          <p className="text-slate-500 text-[11px] leading-relaxed mb-4 line-clamp-3 font-medium italic flex-1">
                             "{rev.review_text}"
                           </p>
 
