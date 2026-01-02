@@ -30,6 +30,75 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Gestion dynamique du SEO (Title & Meta Description)
+  useEffect(() => {
+    let title = "Avisscore - Avis d'Experts Tech & Notes";
+    let description = "Découvrez des avis professionnels et des notes de la communauté sur Avisscore. Le hub ultime pour l'électronique.";
+
+    if (view === 'detail' && selectedProduct) {
+      // Priorité aux données Supabase, puis fallback vers le résumé IA, puis fallback générique
+      title = selectedProduct.seo_title || aiSummary?.seo_title || `${selectedProduct.name} : Avis, Test et Meilleur Prix | Avisscore`;
+      description = selectedProduct.seo_description || aiSummary?.seo_description || selectedProduct.description || description;
+    } else if (view === 'analyses-ia') {
+      title = "Analyses IA Neurales - Avisscore Lab";
+      description = "Découvrez comment notre intelligence artificielle synthétise des milliers d'avis pour vous offrir un verdict impartial.";
+    } else if (view === 'comparateur') {
+      title = "Comparateur de Produits Tech & Auto | Avisscore";
+      description = "Comparez les caractéristiques et les avis réels des meilleurs produits du marché.";
+    } else if (view === 'api-pro') {
+      title = "API Avisscore Pro - Intégration d'Analyses IA";
+      description = "Solution API pour e-commerçants : intégrez nos scores et synthèses IA sur vos fiches produits.";
+    } else if (view === 'contact') {
+      title = "Contactez l'Équipe Avisscore";
+      description = "Une question ou une demande de partenariat ? Contactez nos experts tech.";
+    }
+
+    document.title = title;
+    const metaDescriptionTag = document.querySelector('meta[name="description"]');
+    if (metaDescriptionTag) {
+      metaDescriptionTag.setAttribute('content', description);
+    }
+  }, [view, selectedProduct, aiSummary]);
+
+  // Gestion du balisage Schema.org JSON-LD
+  useEffect(() => {
+    // Nettoyage de l'ancien script
+    const existingScript = document.getElementById('schema-ld-json');
+    if (existingScript) {
+      existingScript.remove();
+    }
+
+    if (view === 'detail' && selectedProduct) {
+      const ratingValue = selectedProduct.external_rating || selectedProduct.rating || selectedProduct.score || 4.5;
+      const reviewCount = selectedProduct.external_review_count || (selectedProduct.reviews?.length || 10);
+
+      const jsonLd = {
+        "@context": "https://schema.org/",
+        "@type": "Product",
+        "name": selectedProduct.name,
+        "image": selectedProduct.image_url,
+        "description": selectedProduct.seo_description || selectedProduct.description,
+        "brand": {
+          "@type": "Brand",
+          "name": "Avisscore"
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": String(ratingValue),
+          "bestRating": "5",
+          "worstRating": "1",
+          "reviewCount": String(reviewCount)
+        }
+      };
+
+      const script = document.createElement('script');
+      script.id = 'schema-ld-json';
+      script.type = 'application/ld+json';
+      script.text = JSON.stringify(jsonLd);
+      document.head.appendChild(script);
+    }
+  }, [view, selectedProduct]);
+
   const loadHomeData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -374,7 +443,7 @@ export default function App() {
               <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center text-white text-3xl mx-auto mb-10 shadow-xl shadow-blue-500/20">
                 <i className="fas fa-envelope"></i>
               </div>
-              <h1 className="text-4xl font-black text-slate-900 tracking-tighter mb-6">Contactez-nous</h1>
+              <h2 className="text-4xl font-black text-slate-900 tracking-tighter mb-6">Contactez-nous</h2>
               <p className="text-slate-500 text-lg font-medium max-w-lg mx-auto mb-12 italic">
                 Une question sur nos analyses ou un partenariat ? Notre équipe est à votre écoute.
               </p>

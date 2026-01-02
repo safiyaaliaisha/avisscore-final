@@ -266,7 +266,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
             {product?.image_url ? (
               <img 
                 src={product.image_url} 
-                alt={String(product?.name || '')} 
+                alt={String(product?.name || 'Produit Avisscore')} 
                 className="relative max-h-full max-w-full object-contain drop-shadow-[0_25px_60px_rgba(0,0,0,0.15)] group-hover:scale-110 transition-transform duration-700" 
               />
             ) : (

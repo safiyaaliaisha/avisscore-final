@@ -45,6 +45,12 @@ export interface Product {
   darty_rev?: string;
   boulanger_rev?: string;
   rakuten_rev?: string;
+  // Métadonnées SEO
+  seo_title?: string;
+  seo_description?: string;
+  // Données pour Schema.org
+  external_rating?: number;
+  external_review_count?: number;
 }
 
 export interface ProductSummary {
