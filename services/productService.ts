@@ -23,7 +23,7 @@ export const fetchHomeProducts = async (limit = 4): Promise<Product[]> => {
 
 /**
  * Récupère les derniers avis réels de la communauté (table reviews)
- * Fallback : Si aucune donnée dans 'reviews', récupère les verdicts experts de la table 'products'.
+ * Jointure avec 'products' incluant le slug et la catégorie pour le routage.
  */
 export const fetchLatestCommunityReviews = async (limit = 3): Promise<any[]> => {
   try {
@@ -33,34 +33,8 @@ export const fetchLatestCommunityReviews = async (limit = 3): Promise<any[]> => 
       .order('created_at', { ascending: false })
       .limit(limit);
 
-    // Si la table reviews est vide ou erreur de jointure, on utilise les reviews intégrées aux produits
-    if (error || !data || data.length === 0) {
-      const { data: prodData } = await supabase
-        .from('products')
-        .select('name, image_url, category, product_slug, review_text, created_at, score, rating')
-        .not('review_text', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(limit);
-      
-      if (prodData && prodData.length > 0) {
-        return prodData.map((p, i) => ({
-          id: `expert-rev-${i}`,
-          author_name: "Verdict Expert",
-          review_text: p.review_text,
-          rating: p.score || p.rating || 5,
-          created_at: p.created_at || new Date().toISOString(),
-          products: {
-            name: p.name,
-            image_url: p.image_url,
-            category: p.category,
-            product_slug: p.product_slug
-          }
-        }));
-      }
-      return [];
-    }
-    
-    return data;
+    if (error) throw error;
+    return data || [];
   } catch (error) {
     console.error("Erreur fetchLatestCommunityReviews:", error);
     return [];
@@ -77,11 +51,13 @@ export const fetchFullProductData = async (
   category?: string
 ): Promise<{ data: Product | null; error: any }> => {
   try {
+    // On cible explicitement la table public.products
     let query = supabase.from('products').select('*, reviews(*)');
     
     if (type === 'id') {
       query = query.eq('id', identifier);
     } else if (type === 'slug') {
+      // Utilisation de ilike pour une correspondance exacte mais insensible à la casse
       query = query.ilike('product_slug', identifier);
       if (category) {
         query = query.ilike('category', category);
@@ -93,6 +69,7 @@ export const fetchFullProductData = async (
     const { data, error } = await query.maybeSingle();
 
     if (error) {
+      console.warn("Erreur fetch logic, tentative fallback...", error);
       let fallbackQuery = supabase.from('products').select('*');
       if (type === 'id') fallbackQuery = fallbackQuery.eq('id', identifier);
       else if (type === 'slug') fallbackQuery = fallbackQuery.ilike('product_slug', identifier);
