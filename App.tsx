@@ -62,7 +62,6 @@ export default function App() {
     setView('detail');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     try {
-      // Fix: Convert boolean isId to 'id' | 'name' for fetchFullProductData
       const { data } = await fetchFullProductData(target, isId ? 'id' : 'name');
       if (data) {
         setSelectedProduct(data);
@@ -178,29 +177,46 @@ export default function App() {
                     <div key={i} className="bg-white rounded-3xl p-8 border border-slate-100 animate-pulse h-72 shadow-lg"></div>
                   ))
                 ) : (
-                  popularProducts.map((p) => (
-                    <div 
-                      key={p.id} 
-                      className="bg-white rounded-3xl p-6 border border-slate-100 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 cursor-pointer group flex flex-col items-center text-center" 
-                      onClick={() => handleSearch(p.id, true)}
-                    >
-                      <div className="h-40 w-full flex items-center justify-center mb-6 overflow-hidden">
-                        <img src={p.image_url || ''} alt={String(p.name)} className="max-h-full object-contain group-hover:scale-110 transition-transform duration-700" />
-                      </div>
-                      <div className="w-full text-left">
-                        <h3 className="font-black text-slate-900 text-sm mb-2 truncate group-hover:text-blue-600 transition-colors">{String(p.name)}</h3>
-                        <div className="flex items-center justify-between">
-                          <StarRating rating={p.rating || p.score || 4} size="xs" />
-                          <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Voir l'analyse</span>
+                  popularProducts.map((p) => {
+                    const productUrl = `https://avisscore.com/${p.category || 'Tech'}/${p.product_slug || ''}`;
+                    return (
+                      <div 
+                        key={p.id} 
+                        className="bg-white rounded-3xl p-6 border border-slate-100 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 cursor-pointer group flex flex-col items-center text-center relative overflow-hidden" 
+                      >
+                        {/* Overlay to handle main action vs external link */}
+                        <div className="absolute inset-0 z-0" onClick={() => handleSearch(p.id, true)}></div>
+                        
+                        <div className="h-40 w-full flex items-center justify-center mb-6 overflow-hidden relative z-10 pointer-events-none">
+                          <img src={p.image_url || ''} alt={String(p.name)} className="max-h-full object-contain group-hover:scale-110 transition-transform duration-700" />
                         </div>
+                        <div className="w-full text-left relative z-10 pointer-events-none">
+                          <h3 className="font-black text-slate-900 text-sm mb-2 truncate group-hover:text-blue-600 transition-colors">{String(p.name)}</h3>
+                          <div className="flex items-center justify-between mb-4">
+                            <StarRating rating={p.rating || p.score || 4} size="xs" />
+                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Voir l'analyse</span>
+                          </div>
+                        </div>
+
+                        {/* Direct Link Button */}
+                        <a 
+                          href={productUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-auto w-full bg-slate-50 hover:bg-blue-600 hover:text-white text-slate-900 py-3 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all duration-300 relative z-20 flex items-center justify-center gap-2 border border-slate-100"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Consulter l'offre
+                          <i className="fas fa-external-link-alt text-[8px] opacity-70"></i>
+                        </a>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </section>
 
-            {/* RECENT REVIEWS SECTION (DESIGNED LIKE THE IMAGE) */}
+            {/* RECENT REVIEWS SECTION */}
             <section className="max-w-7xl mx-auto px-6 py-20 bg-slate-50/50 rounded-[3rem] border border-slate-100/50">
               <div className="flex items-center justify-between mb-12">
                 <div className="space-y-1">
@@ -222,7 +238,6 @@ export default function App() {
                         className="bg-white rounded-2xl p-6 border border-slate-100 shadow-xl shadow-slate-200/20 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 cursor-pointer group"
                         onClick={() => handleSearch(rev.products?.name || '', false)}
                       >
-                        {/* Header: User Info */}
                         <div className="flex items-center gap-4 mb-4">
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${getAvatarColor(rev.author_name)}`}>
                             {String(rev.author_name || "A").charAt(0).toUpperCase()}
@@ -235,17 +250,14 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Title: Product Name */}
                         <h5 className="font-black text-slate-900 text-base mb-2 truncate group-hover:text-blue-600 transition-colors">
                           {rev.products?.name || "Produit Tech"}
                         </h5>
 
-                        {/* Body: Review Text */}
                         <p className="text-slate-500 text-xs leading-relaxed mb-4 line-clamp-3 font-medium italic">
                           "{rev.review_text}"
                         </p>
 
-                        {/* Footer: Star Rating */}
                         <div className="flex items-center gap-2 pt-3 border-t border-slate-50">
                           <StarRating rating={rev.rating} />
                           <span className="text-slate-900 font-black text-[11px]">{rev.rating}.0</span>
