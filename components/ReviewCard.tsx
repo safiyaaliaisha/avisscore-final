@@ -160,11 +160,10 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
 
   topReviews = topReviews.slice(0, 3);
 
-  // ROUTING LOGIC STRICTE: https://avisscore.com/[category]/[product_slug]
-  // On utilise les valeurs brutes de Supabase sans nettoyage (No trim, no lowercase, no prefix/suffix)
-  const category = product.category || 'Tech';
-  const slug = product.product_slug || '';
-  const externalUrl = `https://avisscore.com/${category}/${slug}`;
+  // LOGIQUE DE LIEN STRICTE: Base URL + category + / + product_slug
+  const categoryStr = product.category || '';
+  const slugStr = product.product_slug || '';
+  const externalUrl = `https://avisscore.com/${categoryStr}/${slugStr}`;
 
   if (!product) return null;
 
@@ -225,12 +224,12 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Points Forts</h3>
-                  <p className="text-[9px] text-emerald-500 font-black uppercase tracking-[0.2em] leading-none mt-1">Avantages Validés</p>
+                  <p className="text-[9px] text-emerald-500 font-black uppercase tracking-[0.2em] mt-1">Avantages Validés</p>
                 </div>
               </div>
               <ul className="space-y-4">
                 {pointsForts.map((p, i) => (
-                  <li key={i} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-emerald-500/30 hover:shadow-emerald-500/10 hover:-translate-y-1 transition-all duration-300 group/item border-l-4 border-l-emerald-500">
+                  <li key={i} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-emerald-500/30 hover:shadow-emerald-500/10 transition-all duration-300 border-l-4 border-l-emerald-500">
                     <span className="text-sm font-bold text-slate-700 leading-tight">{String(p)}</span>
                   </li>
                 ))}
@@ -244,12 +243,12 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Points Faibles</h3>
-                  <p className="text-[9px] text-rose-500 font-black uppercase tracking-[0.2em] leading-none mt-1">Limites Systèmes</p>
+                  <p className="text-[9px] text-rose-500 font-black uppercase tracking-[0.2em] mt-1">Limites Systèmes</p>
                 </div>
               </div>
               <ul className="space-y-4">
                 {pointsFaibles.map((p, i) => (
-                  <li key={i} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-rose-500/30 hover:shadow-rose-500/10 hover:-translate-y-1 transition-all duration-300 group/item border-l-4 border-l-rose-500">
+                  <li key={i} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-rose-500/30 hover:shadow-rose-500/10 transition-all duration-300 border-l-4 border-l-rose-500">
                     <span className="text-sm font-bold text-slate-700 leading-tight">{String(p)}</span>
                   </li>
                 ))}
@@ -279,8 +278,8 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
             )}
           </div>
           
-          {/* BOUTON EXTERNE AVEC ROUTING STRICT */}
-          {slug && (
+          {/* LIEN EXTERNE STRICTEMENT SOUS L'IMAGE */}
+          {slugStr && (
             <div className="mt-8 w-full px-4 relative z-20">
               <a 
                 href={externalUrl} 
@@ -291,8 +290,8 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
                 Consulter l'offre
                 <i className="fas fa-external-link-alt text-blue-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"></i>
               </a>
-              <div className="mt-3 text-center">
-                <span className="text-[8px] text-slate-400 font-black uppercase tracking-widest">Source: {category}</span>
+              <div className="mt-4 text-center">
+                <span className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em]">Source: {categoryStr}</span>
               </div>
             </div>
           )}
@@ -300,19 +299,16 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <div className="lg:col-span-7 bg-[#0F172A] rounded-[3rem] p-10 shadow-[0_40px_100px_rgba(0,0,0,0.5)] relative overflow-hidden group/specs border border-blue-500/20">
+        <div className="lg:col-span-7 bg-[#0F172A] rounded-[3rem] p-10 shadow-2xl relative overflow-hidden border border-blue-500/20">
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#3b82f6 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
-          <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-600/20 rounded-full blur-[120px] pointer-events-none animate-pulse"></div>
           
           <div className="relative z-10 flex items-center justify-between mb-12 border-b border-white/5 pb-8">
-            <div>
-              <h3 className="text-4xl font-black text-white tracking-tighter flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-600/20 rounded-2xl flex items-center justify-center border border-blue-500/30">
-                  <i className="fas fa-microchip text-blue-400 text-2xl animate-spin-slow"></i>
-                </div>
-                Spécifications <span className="text-blue-500 italic">Ultra</span>
-              </h3>
-            </div>
+            <h3 className="text-4xl font-black text-white tracking-tighter flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-600/20 rounded-2xl flex items-center justify-center border border-blue-500/30">
+                <i className="fas fa-microchip text-blue-400 text-2xl"></i>
+              </div>
+              Spécifications <span className="text-blue-500 italic">Ultra</span>
+            </h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 relative z-10">
             {ficheTechnique.map((f, i) => {
@@ -321,16 +317,15 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
               const valueName = parts.slice(1).join(':').trim() || "Information";
               const icon = getSpecIcon(keyName);
               return (
-                <div key={i} className="group/item relative flex items-center gap-6 p-6 rounded-[2rem] bg-slate-900/40 border border-white/5 hover:border-blue-500/50 hover:bg-blue-600/10 transition-all duration-500 overflow-hidden shadow-inner">
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/[0.05] to-transparent pointer-events-none opacity-0 group-hover/item:opacity-100 transition-opacity"></div>
-                  <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-white/10 flex items-center justify-center text-slate-500 group-hover/item:text-blue-400 group-hover/item:border-blue-500/40 group-hover/item:shadow-[0_0_25px_rgba(59,130,246,0.3)] transition-all duration-500 shrink-0 relative z-10">
-                    <i className={`fas ${icon} text-2xl group-hover/item:scale-110 transition-transform duration-500`}></i>
+                <div key={i} className="relative flex items-center gap-6 p-6 rounded-[2rem] bg-slate-900/40 border border-white/5 hover:border-blue-500/50 transition-all duration-500">
+                  <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-white/10 flex items-center justify-center text-slate-500 shrink-0">
+                    <i className={`fas ${icon} text-2xl`}></i>
                   </div>
-                  <div className="overflow-hidden relative z-10 flex flex-col justify-center">
-                    <span className="block text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1.5">
+                  <div className="overflow-hidden">
+                    <span className="block text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1">
                       {keyName}
                     </span>
-                    <span className="block text-lg font-black text-white tracking-tight leading-tight group-hover/item:text-blue-100">
+                    <span className="block text-lg font-black text-white tracking-tight leading-tight">
                       {valueName}
                     </span>
                   </div>
@@ -340,12 +335,12 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
           </div>
         </div>
 
-        <div className="lg:col-span-5 bg-white rounded-[3rem] border border-slate-100 p-10 shadow-xl shadow-slate-200/50 flex flex-col h-full">
+        <div className="lg:col-span-5 bg-white rounded-[3rem] border border-slate-100 p-10 shadow-xl flex flex-col h-full">
           <h3 className="text-2xl font-black text-slate-900 mb-8 flex items-center gap-4">
             <i className="fas fa-gavel text-blue-600"></i> Verdict Expert
           </h3>
           <div className="flex-1 relative">
-            <p className="text-slate-600 leading-relaxed text-lg font-medium italic relative z-10">
+            <p className="text-slate-600 leading-relaxed text-lg font-medium italic">
               {summary?.review_text?.[0] || product?.review_text || product?.description || "L'analyse française certifiée est en cours de déploiement."}
             </p>
           </div>
