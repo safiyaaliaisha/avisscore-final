@@ -61,7 +61,6 @@ export default function App() {
       if (data) {
         setSelectedProduct(data);
         
-        // Mise à jour de l'URL pour correspondre au format demandé : /Category/Slug
         const prodCategory = data.category || 'Tech';
         const prodSlug = data.product_slug || data.id;
         const newPath = `/${prodCategory}/${prodSlug}`;
@@ -92,7 +91,6 @@ export default function App() {
       const path = window.location.pathname;
       const parts = path.split('/').filter(Boolean);
       
-      // Routage : /[category]/[product_slug]
       if (parts.length >= 2) {
         const [category, slug] = parts;
         handleSearch(slug, 'slug', category);
@@ -167,7 +165,6 @@ export default function App() {
       <div className="flex-1">
         {view === 'home' && (
           <main className="animate-in fade-in duration-500">
-            {/* HERO SECTION */}
             <div className="bg-[#0F172A] py-24 relative overflow-hidden">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(37,99,235,0.1),transparent)]"></div>
               <div className="max-w-5xl mx-auto px-6 relative z-10">
@@ -194,7 +191,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* POPULAR PRODUCTS */}
             <section className="max-w-7xl mx-auto px-6 py-20">
               <div className="flex items-center justify-between mb-10">
                 <h2 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-4">
@@ -210,41 +206,22 @@ export default function App() {
                   ))
                 ) : (
                   popularProducts.map((p) => {
-                    // Format strict demandé : https://avisscore.com/[category]/[product_slug]
-                    const cat = p.category || 'Tech';
-                    const slg = p.product_slug || '';
-                    const productUrl = slg ? `https://avisscore.com/${cat}/${slg}` : null;
-                    
                     return (
                       <div 
                         key={p.id} 
+                        onClick={() => handleSearch(p.product_slug || p.id, p.product_slug ? 'slug' : 'id', p.category)}
                         className="bg-white rounded-3xl p-6 border border-slate-100 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 cursor-pointer group flex flex-col items-center text-center relative overflow-hidden" 
                       >
-                        <div className="absolute inset-0 z-0" onClick={() => handleSearch(p.product_slug || p.id, p.product_slug ? 'slug' : 'id', p.category)}></div>
-                        
                         <div className="h-40 w-full flex items-center justify-center mb-6 overflow-hidden relative z-10 pointer-events-none">
                           <img src={p.image_url || ''} alt={String(p.name)} className="max-h-full object-contain group-hover:scale-110 transition-transform duration-700" />
                         </div>
                         <div className="w-full text-left relative z-10 pointer-events-none">
                           <h3 className="font-black text-slate-900 text-sm mb-2 truncate group-hover:text-blue-600 transition-colors">{String(p.name)}</h3>
-                          <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center justify-between">
                             <StarRating rating={p.rating || p.score || 4} size="xs" />
                             <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Voir l'analyse</span>
                           </div>
                         </div>
-
-                        {productUrl && (
-                          <a 
-                            href={productUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="mt-auto w-full bg-[#0F172A] hover:bg-blue-600 text-white py-3 rounded-xl font-black uppercase tracking-widest text-[9px] transition-all duration-300 relative z-20 flex items-center justify-center gap-2 border border-slate-100 shadow-lg active:scale-95"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            Consulter l'offre
-                            <i className="fas fa-external-link-alt text-[8px] opacity-70"></i>
-                          </a>
-                        )}
                       </div>
                     );
                   })
@@ -252,7 +229,6 @@ export default function App() {
               </div>
             </section>
 
-            {/* RECENT REVIEWS SECTION */}
             <section className="max-w-7xl mx-auto px-6 py-20 bg-slate-50/50 rounded-[3rem] border border-slate-100/50">
               <div className="flex items-center justify-between mb-12">
                 <div className="space-y-1">
@@ -271,8 +247,6 @@ export default function App() {
                     communityReviews.map((rev) => {
                       const prodSlug = rev.products?.product_slug;
                       const prodCategory = rev.products?.category || 'Tech';
-                      const productUrl = prodSlug ? `https://avisscore.com/${prodCategory}/${prodSlug}` : null;
-
                       return (
                         <div 
                           key={rev.id} 
@@ -304,17 +278,6 @@ export default function App() {
                               <StarRating rating={rev.rating} />
                               <span className="text-slate-900 font-black text-[11px]">{rev.rating}.0</span>
                             </div>
-                            {productUrl && (
-                              <a 
-                                href={productUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 font-black text-[9px] uppercase tracking-widest flex items-center gap-1.5 hover:underline"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                Offre <i className="fas fa-external-link-alt text-[7px]"></i>
-                              </a>
-                            )}
                           </div>
                         </div>
                       );
@@ -413,11 +376,45 @@ export default function App() {
         )}
       </div>
 
-      <footer className="bg-white border-t border-slate-200 py-24 shrink-0">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <p className="text-slate-400 text-xs font-bold uppercase tracking-[0.3em]">
-            © 2025 Avisscore Lab. Intelligence Critique Certifiée 100% en Français.
-          </p>
+      <footer className="bg-white border-t border-slate-200 py-20 shrink-0">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+            <div className="col-span-1 md:col-span-2 space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
+                  <i className="fas fa-check-double text-white text-sm"></i>
+                </div>
+                <span className="text-[#0F172A] font-black text-xl tracking-tighter">
+                  Avis<span className="text-blue-600 italic">score</span>
+                </span>
+              </div>
+              <p className="text-slate-500 text-sm font-medium leading-relaxed max-w-xs italic">
+                La plateforme de référence pour des avis d'experts certifiés et des analyses neurales en temps réel.
+              </p>
+            </div>
+            <div className="space-y-6">
+              <h4 className="font-black text-xs uppercase tracking-[0.3em] text-slate-900">Plateforme</h4>
+              <ul className="space-y-4 text-sm font-bold text-slate-500">
+                <li onClick={() => navigateTo('analyses-ia')} className="hover:text-blue-600 cursor-pointer transition-colors">Analyses IA</li>
+                <li onClick={() => navigateTo('comparateur')} className="hover:text-blue-600 cursor-pointer transition-colors">Comparateur</li>
+                <li onClick={() => navigateTo('api-pro')} className="hover:text-blue-600 cursor-pointer transition-colors">API Pro</li>
+              </ul>
+            </div>
+            <div className="space-y-6">
+              <h4 className="font-black text-xs uppercase tracking-[0.3em] text-slate-900">Support & Légal</h4>
+              <ul className="space-y-4 text-sm font-bold text-slate-500">
+                <li onClick={() => navigateTo('contact')} className="hover:text-blue-600 cursor-pointer transition-colors">Contact</li>
+                <li onClick={() => navigateTo('privacy')} className="hover:text-blue-600 cursor-pointer transition-colors">Confidentialité</li>
+                <li onClick={() => navigateTo('terms')} className="hover:text-blue-600 cursor-pointer transition-colors">Mentions Légales</li>
+                <li onClick={() => navigateTo('cookies')} className="hover:text-blue-600 cursor-pointer transition-colors">Cookies</li>
+              </ul>
+            </div>
+          </div>
+          <div className="pt-10 border-t border-slate-100 text-center">
+            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.4em]">
+              © 2025 Avisscore Lab. Intelligence Critique Certifiée 100% en Français.
+            </p>
+          </div>
         </div>
       </footer>
     </div>
