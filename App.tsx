@@ -284,7 +284,7 @@ export default function App() {
                           <div className="flex items-center justify-between pt-3 border-t border-slate-50 mt-4">
                             <div className="flex items-center gap-2">
                               <StarRating rating={rev.rating} />
-                              <span className="text-slate-900 font-black text-[11px]">{rev.rating}.0</span>
+                              <span className="text-slate-900 font-black text-[11px]">{parseFloat(rev.rating).toFixed(1)}</span>
                             </div>
                           </div>
                         </div>
