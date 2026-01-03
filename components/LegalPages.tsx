@@ -54,11 +54,11 @@ export const LegalPage: React.FC<LegalPageProps> = ({ type, onBack }) => {
       sections: [
         {
           h: "Éditeur du site",
-          p: "Avisscore Lab\nSiège social : Tech District, 75000 Paris\nDirecteur de publication : Équipe Avisscore Lab."
+          p: "Nom : Avisscore\nAdresse : 3 rue de la rosière, 33320 Eysines\nEmail : contact@avisscore.fr\nDirecteur de publication : L'équipe Avisscore"
         },
         {
           h: "Hébergement",
-          p: "Ce site est hébergé par Supabase Inc. et déployé via des services de cloud computing sécurisés conformes aux normes internationales."
+          p: "Ce site est hébergé sur une infrastructure cloud distribuée assurée par :\n\n• Vercel Inc. (Frontend & Edge Network) - Siège social : 340 S Lemon Ave #4133, Walnut, CA 91789, USA.\n\n• Google Cloud Platform (Backend & Compute) - Siège social : Gordon House, Barrow Street, Dublin 4, Ireland."
         },
         {
           h: "Propriété intellectuelle",
