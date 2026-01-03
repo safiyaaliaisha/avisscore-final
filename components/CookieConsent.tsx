@@ -1,13 +1,56 @@
 
 import React, { useState, useEffect } from 'react';
 
+declare global {
+  interface Window {
+    dataLayer: any[];
+    gtag: (...args: any[]) => void;
+  }
+}
+
 export const CookieConsent: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const GA_ID = 'G-XRQ6PG335E';
+
+  /**
+   * Injecte dynamiquement les scripts Google Analytics
+   * Uniquement si l'utilisateur a donné son consentement.
+   */
+  const initializeAnalytics = () => {
+    if (document.getElementById('google-analytics-script')) return;
+
+    // 1. Injection du script principal Google Tag Manager
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
+    script.id = 'google-analytics-script';
+    document.head.appendChild(script);
+
+    // 2. Initialisation de la dataLayer et configuration gtag
+    const inlineScript = document.createElement('script');
+    inlineScript.innerHTML = `
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', '${GA_ID}', {
+        'anonymize_ip': true,
+        'cookie_flags': 'SameSite=None;Secure'
+      });
+    `;
+    inlineScript.id = 'google-analytics-config';
+    document.head.appendChild(inlineScript);
+    
+    console.debug("Avisscore Tracking: Enabled (G-XRQ6PG335E)");
+  };
 
   useEffect(() => {
     const consent = localStorage.getItem('avisscore_consent');
-    if (consent === null) {
-      // Un léger délai pour ne pas agresser l'utilisateur dès le chargement
+    
+    if (consent === 'true') {
+      // Consentement déjà donné, on active directement
+      initializeAnalytics();
+    } else if (consent === null) {
+      // Pas encore de choix, on affiche le bandeau après un court délai
       const timer = setTimeout(() => setIsVisible(true), 1200);
       return () => clearTimeout(timer);
     }
@@ -15,6 +58,9 @@ export const CookieConsent: React.FC = () => {
 
   const handleConsent = (choice: boolean) => {
     localStorage.setItem('avisscore_consent', String(choice));
+    if (choice) {
+      initializeAnalytics();
+    }
     setIsVisible(false);
   };
 
