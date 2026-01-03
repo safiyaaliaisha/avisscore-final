@@ -7,6 +7,7 @@ import { Product, ProductSummary } from './types';
 import { ReviewCard } from './components/ReviewCard';
 import { LegalPage } from './components/LegalPages';
 import { FeaturePage } from './components/FeaturePages';
+import { NotFound } from './components/NotFound';
 
 const StarRating = ({ rating, size = "xs" }: { rating: number; size?: string }) => {
   return (
@@ -18,7 +19,7 @@ const StarRating = ({ rating, size = "xs" }: { rating: number; size?: string }) 
   );
 };
 
-type ViewState = 'home' | 'detail' | 'privacy' | 'cookies' | 'terms' | 'analyses-ia' | 'comparateur' | 'api-pro' | 'contact';
+type ViewState = 'home' | 'detail' | 'privacy' | 'cookies' | 'terms' | 'analyses-ia' | 'comparateur' | 'api-pro' | 'contact' | 'not-found';
 
 export default function App() {
   const [view, setView] = useState<ViewState>('home');
@@ -36,7 +37,6 @@ export default function App() {
     let description = "Découvrez des avis professionnels et des notes de la communauté sur Avisscore. Le hub ultime pour l'électronique.";
 
     if (view === 'detail' && selectedProduct) {
-      // Priorité aux données Supabase, puis fallback vers le résumé IA, puis fallback générique
       title = selectedProduct.seo_title || aiSummary?.seo_title || `${selectedProduct.name} : Avis, Test et Meilleur Prix | Avisscore`;
       description = selectedProduct.seo_description || aiSummary?.seo_description || selectedProduct.description || description;
     } else if (view === 'analyses-ia') {
@@ -51,6 +51,9 @@ export default function App() {
     } else if (view === 'contact') {
       title = "Contactez l'Équipe Avisscore";
       description = "Une question ou une demande de partenariat ? Contactez nos experts tech.";
+    } else if (view === 'not-found') {
+      title = "Page introuvable - Avisscore";
+      description = "La page que vous recherchez n'existe pas.";
     }
 
     document.title = title;
@@ -62,7 +65,6 @@ export default function App() {
 
   // Gestion du balisage Schema.org JSON-LD
   useEffect(() => {
-    // Nettoyage de l'ancien script
     const existingScript = document.getElementById('schema-ld-json');
     if (existingScript) {
       existingScript.remove();
@@ -145,13 +147,13 @@ export default function App() {
       } else {
         setSelectedProduct(null);
         setError("Produit introuvable");
-        setView('detail');
+        setView('not-found'); // On redirige vers 404 si le produit est introuvable
       }
     } catch (e) {
       console.error(e);
       setError("Erreur lors de l'analyse");
       setSelectedProduct(null);
-      setView('detail');
+      setView('not-found');
     } finally {
       setIsLoading(false);
     }
@@ -163,6 +165,12 @@ export default function App() {
       const cleanHash = hash.startsWith('#/') ? hash.slice(2) : hash.startsWith('#') ? hash.slice(1) : hash;
       const parts = cleanHash.split('/').filter(Boolean);
       
+      if (parts.length === 0) {
+        setView('home');
+        loadHomeData();
+        return;
+      }
+
       if (parts.length >= 2) {
         const [category, slug] = parts;
         handleSearch(slug, 'slug', category);
@@ -172,13 +180,19 @@ export default function App() {
           setView(page);
           setIsLoading(false);
           setSelectedProduct(null);
-        } else {
+        } else if (page === 'home') {
           setView('home');
           loadHomeData();
+        } else {
+          // Catch-all pour les routes à un seul segment inconnues
+          setView('not-found');
+          setIsLoading(false);
+          setSelectedProduct(null);
         }
       } else {
-        setView('home');
-        loadHomeData();
+        setView('not-found');
+        setIsLoading(false);
+        setSelectedProduct(null);
       }
     };
 
@@ -189,7 +203,6 @@ export default function App() {
 
   const navigateTo = (newView: ViewState) => {
     const hash = newView === 'home' ? '#/' : `#/${newView}`;
-    // Si on retourne à l'accueil, on nettoie les états immédiatement pour éviter le flash
     if (newView === 'home') {
       setSelectedProduct(null);
       setError(null);
@@ -212,12 +225,6 @@ export default function App() {
     if (diffInHours < 1) return "À l'instant";
     if (diffInHours < 24) return `Il y a ${diffInHours}h`;
     return `Il y a ${Math.floor(diffInHours / 24)}j`;
-  };
-
-  // Helper pour vérifier si on est sur une route produit
-  const isDetailRoute = () => {
-    const parts = window.location.hash.split('/').filter(Boolean);
-    return parts.length >= 2;
   };
 
   return (
@@ -251,7 +258,7 @@ export default function App() {
         </div>
       </nav>
 
-      <div className="flex-1">
+      <div className="flex-1 flex flex-col">
         {view === 'home' && (
           <main className="animate-in fade-in duration-500">
             <div className="bg-[#0F172A] py-24 relative overflow-hidden">
@@ -385,9 +392,6 @@ export default function App() {
         {view === 'detail' && (
           <main className="max-w-7xl mx-auto px-6 py-12 animate-in slide-in-from-bottom-6 duration-700">
             {!selectedProduct ? (
-              // On vérifie si on est censé être sur une page détail avant d'afficher l'erreur
-              // Cela évite l'affichage de "Produit introuvable" pendant le switch de view vers "home"
-              isDetailRoute() ? (
                 <div className="text-center py-48 bg-white rounded-[3rem] border border-slate-100 shadow-2xl">
                   {isLoading ? (
                      <div className="flex flex-col items-center gap-8">
@@ -407,7 +411,6 @@ export default function App() {
                     </>
                   )}
                 </div>
-              ) : null
             ) : (
               <div className="space-y-12">
                 <ReviewCard 
@@ -423,6 +426,10 @@ export default function App() {
               </div>
             )}
           </main>
+        )}
+
+        {view === 'not-found' && (
+          <NotFound onBack={() => navigateTo('home')} />
         )}
 
         {(view === 'privacy' || view === 'cookies' || view === 'terms') && (
