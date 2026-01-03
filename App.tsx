@@ -8,6 +8,7 @@ import { ReviewCard } from './components/ReviewCard';
 import { LegalPage } from './components/LegalPages';
 import { FeaturePage } from './components/FeaturePages';
 import { NotFound } from './components/NotFound';
+import { CookieConsent } from './components/CookieConsent';
 
 const StarRating = ({ rating, size = "xs" }: { rating: number; size?: string }) => {
   return (
@@ -147,7 +148,7 @@ export default function App() {
       } else {
         setSelectedProduct(null);
         setError("Produit introuvable");
-        setView('not-found'); // On redirige vers 404 si le produit est introuvable
+        setView('not-found');
       }
     } catch (e) {
       console.error(e);
@@ -184,7 +185,6 @@ export default function App() {
           setView('home');
           loadHomeData();
         } else {
-          // Catch-all pour les routes à un seul segment inconnues
           setView('not-found');
           setIsLoading(false);
           setSelectedProduct(null);
@@ -452,7 +452,7 @@ export default function App() {
               </div>
               <h2 className="text-4xl font-black text-slate-900 tracking-tighter mb-6">Contactez-nous</h2>
               <p className="text-slate-500 text-lg font-medium max-w-lg mx-auto mb-12 italic">
-                Une question sur nos analyses ou un partenariat ? Notre équipe est à votre écoute.
+                Une question ou un partenariat ? Notre équipe est à votre écoute.
               </p>
               
               <div className="bg-slate-50 rounded-3xl p-10 border border-slate-100 inline-block group hover:bg-white hover:shadow-2xl transition-all duration-500 cursor-pointer">
@@ -517,6 +517,8 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      <CookieConsent />
     </div>
   );
 }
