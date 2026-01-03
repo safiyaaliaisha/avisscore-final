@@ -287,7 +287,7 @@ export default function App() {
               </div>
             </div>
 
-            <section className="max-w-7xl mx-auto px-6 py-20">
+            <section className="max-w-7xl mx-auto px-6 pt-16 pb-6">
               <div className="flex items-center justify-between mb-10">
                 <h2 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-4">
                   <span className="w-2 h-10 bg-blue-600 rounded-full"></span>
@@ -325,7 +325,7 @@ export default function App() {
               </div>
             </section>
 
-            <section className="max-w-7xl mx-auto px-6 py-20 bg-slate-50/50 rounded-[3rem] border border-slate-100/50">
+            <section className="max-w-7xl mx-auto px-6 pt-6 pb-16 bg-slate-50/50 rounded-[3rem] border border-slate-100/50">
               <div className="flex items-center justify-between mb-12">
                 <div className="space-y-1">
                   <h2 className="text-3xl font-black text-slate-900 tracking-tight">Avis Récents</h2>
