@@ -16,7 +16,7 @@ export const CookieConsent: React.FC = () => {
    * Injecte dynamiquement les scripts Google Analytics
    * Uniquement si l'utilisateur a donné son consentement.
    */
-  const initializeAnalytics = () => {
+  const enableAnalytics = () => {
     if (document.getElementById('google-analytics-script')) return;
 
     // 1. Injection du script principal Google Tag Manager
@@ -32,15 +32,12 @@ export const CookieConsent: React.FC = () => {
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', '${GA_ID}', {
-        'anonymize_ip': true,
-        'cookie_flags': 'SameSite=None;Secure'
-      });
+      gtag('config', '${GA_ID}');
     `;
     inlineScript.id = 'google-analytics-config';
     document.head.appendChild(inlineScript);
     
-    console.debug("Avisscore Tracking: Enabled (G-XRQ6PG335E)");
+    console.debug("Avisscore Tracking: Enabled (" + GA_ID + ")");
   };
 
   useEffect(() => {
@@ -48,7 +45,7 @@ export const CookieConsent: React.FC = () => {
     
     if (consent === 'true') {
       // Consentement déjà donné, on active directement
-      initializeAnalytics();
+      enableAnalytics();
     } else if (consent === null) {
       // Pas encore de choix, on affiche le bandeau après un court délai
       const timer = setTimeout(() => setIsVisible(true), 1200);
@@ -59,7 +56,7 @@ export const CookieConsent: React.FC = () => {
   const handleConsent = (choice: boolean) => {
     localStorage.setItem('avisscore_consent', String(choice));
     if (choice) {
-      initializeAnalytics();
+      enableAnalytics();
     }
     setIsVisible(false);
   };
