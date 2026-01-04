@@ -122,16 +122,17 @@ export default function App() {
 
   const handleSearch = useCallback(async (target: string, type: 'id' | 'slug' | 'name' = 'name', category?: string) => {
     if (!target.trim()) return;
+    
     setIsLoading(true);
     setError(null);
     setAiSummary(null);
+    setView('detail'); // On passe en vue détail immédiatement pour afficher le loader spécifique
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     try {
       const { data } = await fetchFullProductData(target, type, category);
       if (data) {
         setSelectedProduct(data);
-        setView('detail');
         
         const prodCategory = data.category || 'Tech';
         const prodSlug = data.product_slug || data.id;
@@ -185,6 +186,7 @@ export default function App() {
           setView('home');
           loadHomeData();
         } else {
+          // Pour éviter les flashs, on ne passe en not-found que si ce n'est pas un changement vers l'accueil
           setView('not-found');
           setIsLoading(false);
           setSelectedProduct(null);
@@ -203,11 +205,15 @@ export default function App() {
 
   const navigateTo = (newView: ViewState) => {
     const hash = newView === 'home' ? '#/' : `#/${newView}`;
+    
+    // Reset state before navigation
     if (newView === 'home') {
       setSelectedProduct(null);
       setError(null);
       setAiSummary(null);
+      setIsLoading(true); // Prépare le chargement des produits de l'accueil
     }
+    
     window.location.hash = hash;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -391,25 +397,21 @@ export default function App() {
 
         {view === 'detail' && (
           <main className="max-w-7xl mx-auto px-6 py-12 animate-in slide-in-from-bottom-6 duration-700">
-            {!selectedProduct ? (
+            {isLoading ? (
+                <div className="text-center py-48 bg-white rounded-[3rem] border border-slate-100 shadow-2xl flex flex-col items-center gap-8">
+                   <div className="w-20 h-20 border-[6px] border-blue-600 border-t-transparent rounded-full animate-spin shadow-xl"></div>
+                   <div className="space-y-2">
+                     <p className="text-slate-900 font-black text-2xl tracking-tighter uppercase">Analyse en cours...</p>
+                     <p className="text-slate-400 font-bold tracking-widest text-xs uppercase">Extraction des Consensus</p>
+                   </div>
+                </div>
+            ) : !selectedProduct ? (
                 <div className="text-center py-48 bg-white rounded-[3rem] border border-slate-100 shadow-2xl">
-                  {isLoading ? (
-                     <div className="flex flex-col items-center gap-8">
-                        <div className="w-20 h-20 border-[6px] border-blue-600 border-t-transparent rounded-full animate-spin shadow-xl"></div>
-                        <div className="space-y-2">
-                          <p className="text-slate-900 font-black text-2xl tracking-tighter uppercase">Analyse en cours...</p>
-                          <p className="text-slate-400 font-bold tracking-widest text-xs uppercase">Extraction des Consensus</p>
-                        </div>
-                     </div>
-                  ) : (
-                    <>
-                      <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-8 text-4xl">
-                        <i className="fas fa-exclamation-triangle"></i>
-                      </div>
-                      <h2 className="text-4xl font-black mb-6 text-slate-900">{error || "Produit introuvable"}</h2>
-                      <button onClick={() => navigateTo('home')} className="bg-[#0F172A] text-white px-12 py-5 rounded-2xl font-black uppercase tracking-widest shadow-2xl hover:bg-blue-600 transition-all active:scale-95">Retour</button>
-                    </>
-                  )}
+                  <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-8 text-4xl">
+                    <i className="fas fa-exclamation-triangle"></i>
+                  </div>
+                  <h2 className="text-4xl font-black mb-6 text-slate-900">{error || "Produit introuvable"}</h2>
+                  <button onClick={() => navigateTo('home')} className="bg-[#0F172A] text-white px-12 py-5 rounded-2xl font-black uppercase tracking-widest shadow-2xl hover:bg-blue-600 transition-all active:scale-95">Retour</button>
                 </div>
             ) : (
               <div className="space-y-12">

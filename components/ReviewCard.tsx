@@ -265,6 +265,20 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
         </div>
 
         <div className="lg:col-span-4 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col items-center justify-center relative overflow-hidden group">
+          {alternativeStr && (
+            <div className="w-full mb-8 bg-blue-50/80 border border-blue-100 p-4 rounded-2xl flex items-center justify-between group/alt animate-in slide-in-from-top-4 duration-1000">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                  <i className="fas fa-right-left text-xs"></i>
+                </div>
+                <div>
+                  <span className="block text-[8px] font-black text-blue-600 uppercase tracking-widest mb-0.5">Alternative Recommandée</span>
+                  <span className="block text-xs font-black text-slate-800 tracking-tight">{alternativeStr.split('-')[0].trim()}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="mb-6 text-center w-full relative z-10">
             <h1 className="text-3xl font-black text-slate-900 tracking-tighter mb-1 line-clamp-2 leading-tight">
               {String(product?.name || 'Produit')}
@@ -360,25 +374,6 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
               </span>
             </div>
           </div>
-
-          {alternativeStr && (
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group">
-              <div className="absolute top-0 right-0 p-8 opacity-10 text-6xl text-white pointer-events-none group-hover:scale-110 transition-transform">
-                <i className="fas fa-award"></i>
-              </div>
-              <div className="relative z-10">
-                <span className="inline-block bg-white/20 text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest mb-3 border border-white/20">
-                  Meilleure Alternative
-                </span>
-                <p className="text-white font-black text-xl tracking-tighter leading-tight mb-2">
-                  {alternativeStr.split('-')[0].trim()}
-                </p>
-                <p className="text-blue-100 text-xs font-medium italic">
-                  {alternativeStr.split('-').slice(1).join('-').trim() || "Considéré comme le concurrent direct le plus sérieux du moment."}
-                </p>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
