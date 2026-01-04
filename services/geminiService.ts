@@ -5,6 +5,7 @@ import { Review, ProductSummary } from "../types";
 export const getAIReviewSummary = async (productName: string, reviews: Review[]): Promise<ProductSummary | null> => {
   if (!reviews || reviews.length === 0) return null;
 
+  // Initialize with named parameter as required by the SDK
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const reviewsContext = reviews
@@ -58,7 +59,13 @@ ${reviewsContext}`;
       }
     });
 
-    const data = JSON.parse(response.text);
+    // Extract text output using the .text property as recommended
+    const jsonStr = response.text?.trim();
+    if (!jsonStr) {
+      throw new Error("No content generated");
+    }
+
+    const data = JSON.parse(jsonStr);
     return { ...data, sentiment: data.rating >= 4 ? "Excellent" : "Correct" } as ProductSummary;
   } catch (error) {
     console.error("Gemini Error:", error);
