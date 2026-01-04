@@ -106,9 +106,10 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
   const pointsForts = Array.isArray(summary?.points_forts) && summary.points_forts.length > 0 ? summary.points_forts : (Array.isArray(product?.points_forts) ? product.points_forts : []);
   const pointsFaibles = Array.isArray(summary?.points_faibles) && summary.points_faibles.length > 0 ? summary.points_faibles : (Array.isArray(product?.points_faibles) ? product.points_faibles : []);
   const ficheTechnique = Array.isArray(summary?.fiche_technique) && summary.fiche_technique.length > 0 ? summary.fiche_technique : (Array.isArray(product?.fiche_technique) ? product.fiche_technique : []);
-  
+  const cycleDeVie = Array.isArray(summary?.cycle_de_vie) && summary.cycle_de_vie.length > 0 ? summary.cycle_de_vie : (Array.isArray(product?.cycle_de_vie) ? product.cycle_de_vie : []);
+  const alternativeStr = summary?.alternative || product?.alternative;
+
   let topReviews: any[] = [];
-  
   const realReviews = Array.isArray(product?.reviews) ? product.reviews : [];
   topReviews = [...realReviews];
 
@@ -173,11 +174,22 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-12">
           <div className="flex flex-col gap-2">
             <h2 className="text-3xl font-black text-slate-900 tracking-tighter">Avis du Produit</h2>
-            <div className="flex items-center gap-3">
-              <span className={`w-2 h-2 ${realReviews.length >= 3 || merchantReviews.length >= 3 ? 'bg-emerald-500' : 'bg-blue-500'} rounded-full animate-pulse`}></span>
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">
-                {merchantReviews.length > 0 ? "Validation Marchands Certifiée" : "Analyse Hybride Experts & IA"}
-              </span>
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-3">
+                <span className={`w-2 h-2 ${realReviews.length >= 3 || merchantReviews.length >= 3 ? 'bg-emerald-500' : 'bg-blue-500'} rounded-full animate-pulse`}></span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">
+                  {merchantReviews.length > 0 ? "Validation Marchands Certifiée" : "Analyse Hybride Experts & IA"}
+                </span>
+              </div>
+              {product.external_rating && (
+                <div className="bg-amber-50 border border-amber-200 px-3 py-1 rounded-full flex items-center gap-2 shadow-sm">
+                  <i className="fas fa-globe text-amber-500 text-[10px]"></i>
+                  <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Note Globale du Web: {product.external_rating}/5</span>
+                  {product.external_review_count && (
+                    <span className="text-[9px] font-bold text-amber-400">({product.external_review_count} avis)</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-6 p-4 bg-[#0F172A] rounded-2xl shadow-xl border border-white/5">
@@ -313,23 +325,60 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
           </div>
         </div>
 
-        <div className="lg:col-span-5 bg-white rounded-[3rem] border border-slate-100 p-10 shadow-xl flex flex-col h-full">
-          <h3 className="text-2xl font-black text-slate-900 mb-8 flex items-center gap-4">
-            <i className="fas fa-gavel text-blue-600"></i> Verdict Expert
-          </h3>
-          <div className="flex-1 relative">
-            <p className="text-slate-600 leading-relaxed text-lg font-medium italic">
-              {summary?.review_text?.[0] || product?.review_text || product?.description || "L'analyse française certifiée est en cours de déploiement."}
-            </p>
+        <div className="lg:col-span-5 space-y-8 flex flex-col">
+          <div className="bg-white rounded-[3rem] border border-slate-100 p-10 shadow-xl flex flex-col">
+            <h3 className="text-2xl font-black text-slate-900 mb-8 flex items-center gap-4">
+              <i className="fas fa-gavel text-blue-600"></i> Verdict Expert
+            </h3>
+            <div className="flex-1 relative mb-10">
+              <p className="text-slate-600 leading-relaxed text-lg font-medium italic">
+                {summary?.review_text?.[0] || product?.review_text || product?.description || "L'analyse française certifiée est en cours de déploiement."}
+              </p>
+            </div>
+            {cycleDeVie.length > 0 && (
+              <div className="bg-blue-50/50 rounded-3xl p-6 border border-blue-100">
+                <div className="flex items-center gap-3 mb-4">
+                  <i className="fas fa-sync-alt text-blue-600 text-sm"></i>
+                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">Cycle de Vie</h4>
+                </div>
+                <div className="space-y-3">
+                  {cycleDeVie.map((step, idx) => (
+                    <div key={idx} className="flex items-start gap-3">
+                      <div className="w-1.5 h-1.5 bg-blue-600 rounded-full mt-1.5 shrink-0"></div>
+                      <p className="text-slate-600 text-xs font-bold">{step}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="mt-8 pt-8 border-t border-slate-50 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <i className="fas fa-fingerprint text-blue-500"></i> Authentifié par Avisscore Neural
+              </div>
+              <span className="bg-blue-600 text-white px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest">
+                Expert Choice
+              </span>
+            </div>
           </div>
-          <div className="mt-10 pt-8 border-t border-slate-50 flex items-center justify-between">
-             <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-               <i className="fas fa-fingerprint text-blue-500"></i> Authentifié par Avisscore Neural
-             </div>
-             <span className="bg-blue-600 text-white px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest">
-               Expert Choice
-             </span>
-          </div>
+
+          {alternativeStr && (
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-8 opacity-10 text-6xl text-white pointer-events-none group-hover:scale-110 transition-transform">
+                <i className="fas fa-award"></i>
+              </div>
+              <div className="relative z-10">
+                <span className="inline-block bg-white/20 text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest mb-3 border border-white/20">
+                  Meilleure Alternative
+                </span>
+                <p className="text-white font-black text-xl tracking-tighter leading-tight mb-2">
+                  {alternativeStr.split('-')[0].trim()}
+                </p>
+                <p className="text-blue-100 text-xs font-medium italic">
+                  {alternativeStr.split('-').slice(1).join('-').trim() || "Considéré comme le concurrent direct le plus sérieux du moment."}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
