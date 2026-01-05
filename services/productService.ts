@@ -1,6 +1,6 @@
 
 import { supabase } from '../lib/supabaseClient';
-import { Product, Review } from '../types';
+import { Product } from '../types';
 
 /**
  * Récupère les derniers produits pour la page d'accueil
@@ -14,7 +14,7 @@ export const fetchHomeProducts = async (limit = 4): Promise<Product[]> => {
       .limit(limit);
 
     if (error) throw error;
-    return data || [];
+    return (data as Product[]) || [];
   } catch (error) {
     console.error("Erreur fetchHomeProducts:", error);
     return [];
@@ -115,13 +115,13 @@ export const fetchFullProductData = async (
       else fallbackQuery = fallbackQuery.ilike('name', `%${identifier}%`);
       
       const { data: fbData, error: fbError } = await fallbackQuery.maybeSingle();
-      if (fbError || !fbData) return { data: null, error: fbError || 'Produit non trouvé' };
-      return { data: fbData, error: null };
+      if (fbError || !fbData) return { data: null, error: fbError?.message || 'Produit non trouvé' };
+      return { data: fbData as Product, error: null };
     }
 
-    return { data, error: null };
-  } catch (err) {
+    return { data: data as Product, error: null };
+  } catch (err: any) {
     console.error("Erreur critique fetchFullProductData:", err);
-    return { data: null, error: err };
+    return { data: null, error: err?.message || 'An unexpected error occurred' };
   }
 };

@@ -22,17 +22,29 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, popul
   let faqs: { q: string; a: string }[] = [];
 
   try {
-    if (product.faq) {
-      const rawFaqs = typeof product.faq === 'string' ? JSON.parse(product.faq) : product.faq;
-      if (Array.isArray(rawFaqs) && rawFaqs.length > 0) {
-        faqs = rawFaqs.map((item: any) => ({
+    const rawFaqData = product.faq;
+    if (rawFaqData) {
+      let parsed: any[] = [];
+      if (typeof rawFaqData === 'string') {
+        try {
+          const json = JSON.parse(rawFaqData);
+          parsed = Array.isArray(json) ? json : [];
+        } catch (e) {
+          console.error("Failed to parse FAQ string", e);
+        }
+      } else if (Array.isArray(rawFaqData)) {
+        parsed = rawFaqData;
+      }
+
+      if (parsed.length > 0) {
+        faqs = parsed.map((item: FAQItem) => ({
           q: item.question || item.q || "Question sans titre",
           a: item.answer || item.a || "Réponse non disponible"
         }));
       }
     }
   } catch (e) {
-    console.error("Error parsing product.faq:", e);
+    console.error("Error processing FAQ data:", e);
   }
 
   // Fallback to generated questions if DB faq is empty or missing

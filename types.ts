@@ -22,10 +22,10 @@ export interface Analysis {
 }
 
 export interface FAQItem {
-  question: string;
-  answer: string;
-  q?: string; // Support for alternate naming
-  a?: string; // Support for alternate naming
+  question?: string;
+  answer?: string;
+  q?: string;
+  a?: string;
 }
 
 export interface Product {
@@ -37,7 +37,7 @@ export interface Product {
   category?: string;
   product_slug?: string;
   created_at?: string;
-  // Champs intégrés
+  // Integrated fields
   rating?: number;
   review_text?: string;
   points_forts?: string[];
@@ -48,16 +48,16 @@ export interface Product {
   score?: number;
   reviews?: Review[];
   analysis?: Analysis;
-  faq?: FAQItem[] | string; // New field for FAQ
-  // Marchands
+  faq?: FAQItem[] | string | null; // Explicitly allow null
+  // Merchants
   fnac_rev?: string;
   darty_rev?: string;
   boulanger_rev?: string;
   rakuten_rev?: string;
-  // Métadonnées SEO
+  // SEO Metadata
   seo_title?: string;
   seo_description?: string;
-  // Données externes
+  // External data
   external_rating?: number;
   external_review_count?: number;
 }
