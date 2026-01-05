@@ -1,7 +1,6 @@
-
 import React, { useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Product, ProductSummary, FAQItem } from '../types';
+import { Product, ProductSummary } from '../types';
 import { ReviewCard } from '../components/ReviewCard';
 
 interface ProductDetailsProps {
@@ -19,8 +18,8 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, popul
   const reviewCount = (product.reviews?.length || 0) > 0 ? product.reviews!.length : 100;
 
   /**
-   * Safe FAQ Data Extraction
-   * Strictly processes data from Supabase 'faq' column.
+   * Safe FAQ Data Extraction (FIXED)
+   * Handles Objects, Arrays, and missing Questions.
    */
   const faqs = useMemo(() => {
     const rawData = product.faq;
@@ -29,23 +28,29 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, popul
     let items: any[] = [];
     
     try {
+      // 1. Normalize Data Structure
       if (typeof rawData === 'string') {
         const parsed = JSON.parse(rawData);
-        items = Array.isArray(parsed) ? parsed : [];
+        items = Array.isArray(parsed) ? parsed : [parsed];
       } else if (Array.isArray(rawData)) {
         items = rawData;
+      } else if (typeof rawData === 'object') {
+        items = [rawData];
       }
     } catch (e) {
       console.error("FAQ Parsing error:", e);
       return [];
     }
 
+    // 2. Map & Filter
     return items
       .map((item: any) => ({
-        q: String(item?.question || item?.q || ""),
+        // Use a default title if question is missing
+        q: String(item?.question || item?.q || "L'avis de l'expert"), 
         a: String(item?.answer || item?.a || "")
       }))
-      .filter(item => item.q.length > 0 && item.a.length > 0);
+      // Only hide if the ANSWER is empty (we don't care if question is empty now)
+      .filter(item => item.a.length > 0);
   }, [product.faq]);
 
   const productSchema = {
@@ -99,7 +104,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, popul
         relatedProducts={popularProducts.filter(p => p.id !== product.id).slice(0, 3)}
       />
 
-      {/* FAQ Section: Only visible if real, non-null data exists in database */}
+      {/* FAQ Section: Visible if we have valid answers */}
       {faqs.length > 0 && (
         <section className="max-w-4xl mx-auto pt-12 pb-8 px-4 animate-in fade-in slide-in-from-bottom-4 duration-1000">
           <div className="text-center mb-12 space-y-2">
