@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Product, ProductSummary, FAQItem } from '../types';
 import { ReviewCard } from '../components/ReviewCard';
@@ -18,34 +18,35 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, popul
   const ratingValue = product.score || (product.rating ? product.rating * 2 : 8.5);
   const reviewCount = (product.reviews?.length || 0) > 0 ? product.reviews!.length : 100;
 
-  // FAQ Data Logic: Strictly from Supabase. No fake fallbacks.
-  let faqs: { q: string; a: string }[] = [];
+  /**
+   * Safe FAQ Data Extraction
+   * Strictly processes data from Supabase 'faq' column.
+   */
+  const faqs = useMemo(() => {
+    const rawData = product.faq;
+    if (!rawData) return [];
 
-  try {
-    const rawFaqData = product.faq;
-    if (rawFaqData) {
-      let parsed: any[] = [];
-      if (typeof rawFaqData === 'string') {
-        try {
-          const json = JSON.parse(rawFaqData);
-          parsed = Array.isArray(json) ? json : [];
-        } catch (e) {
-          console.error("Failed to parse FAQ string", e);
-        }
-      } else if (Array.isArray(rawFaqData)) {
-        parsed = rawFaqData;
+    let items: any[] = [];
+    
+    try {
+      if (typeof rawData === 'string') {
+        const parsed = JSON.parse(rawData);
+        items = Array.isArray(parsed) ? parsed : [];
+      } else if (Array.isArray(rawData)) {
+        items = rawData;
       }
-
-      if (parsed.length > 0) {
-        faqs = parsed.map((item: FAQItem) => ({
-          q: item.question || item.q || "",
-          a: item.answer || item.a || ""
-        })).filter(f => f.q && f.a);
-      }
+    } catch (e) {
+      console.error("FAQ Parsing error:", e);
+      return [];
     }
-  } catch (e) {
-    console.error("Error processing FAQ data:", e);
-  }
+
+    return items
+      .map((item: any) => ({
+        q: String(item?.question || item?.q || ""),
+        a: String(item?.answer || item?.a || "")
+      }))
+      .filter(item => item.q.length > 0 && item.a.length > 0);
+  }, [product.faq]);
 
   const productSchema = {
     "@context": "https://schema.org/",
@@ -98,7 +99,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, popul
         relatedProducts={popularProducts.filter(p => p.id !== product.id).slice(0, 3)}
       />
 
-      {/* FAQ Section: Only visible if real data exists */}
+      {/* FAQ Section: Only visible if real, non-null data exists in database */}
       {faqs.length > 0 && (
         <section className="max-w-4xl mx-auto pt-12 pb-8 px-4 animate-in fade-in slide-in-from-bottom-4 duration-1000">
           <div className="text-center mb-12 space-y-2">

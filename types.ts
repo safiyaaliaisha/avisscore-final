@@ -48,7 +48,7 @@ export interface Product {
   score?: number;
   reviews?: Review[];
   analysis?: Analysis;
-  faq?: FAQItem[] | string | null; // Explicitly allow null
+  faq?: FAQItem[] | string | null; // Make it explicitly nullable
   // Merchants
   fnac_rev?: string;
   darty_rev?: string;
