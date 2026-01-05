@@ -22,7 +22,7 @@ export const fetchHomeProducts = async (limit = 4): Promise<Product[]> => {
 };
 
 /**
- * Récupère les derniers avis.
+ * Récupère les derniers avis réels depuis la base de données.
  */
 export const fetchLatestCommunityReviews = async (limit = 4): Promise<any[]> => {
   try {
@@ -34,28 +34,6 @@ export const fetchLatestCommunityReviews = async (limit = 4): Promise<any[]> => 
       .limit(limit);
 
     if (error || !prodData || prodData.length === 0) {
-      const { data: fallbackData } = await supabase
-        .from('products')
-        .select('name, image_url, category, product_slug, review_text, rating, created_at')
-        .not('review_text', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(limit);
-
-      if (fallbackData) {
-        return fallbackData.map((p, i) => ({
-          id: `expert-rev-${i}`,
-          author_name: "Verdict Expert",
-          review_text: p.review_text?.substring(0, 150) + "...",
-          rating: p.rating || 5,
-          created_at: p.created_at || new Date().toISOString(),
-          products: {
-            name: p.name,
-            image_url: p.image_url,
-            category: p.category,
-            product_slug: p.product_slug
-          }
-        }));
-      }
       return [];
     }
 
@@ -92,7 +70,6 @@ export const fetchFullProductData = async (
   category?: string
 ): Promise<{ data: Product | null; error: any }> => {
   try {
-    // Explicitly requesting faq to avoid any selection omission issues
     let query = supabase.from('products').select('*, reviews(*), faq');
     
     if (type === 'id') {

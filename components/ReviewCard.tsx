@@ -109,9 +109,8 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
   const cycleDeVie = Array.isArray(summary?.cycle_de_vie) && summary.cycle_de_vie.length > 0 ? summary.cycle_de_vie : (Array.isArray(product?.cycle_de_vie) ? product.cycle_de_vie : []);
   const alternativeStr = summary?.alternative || product?.alternative;
 
-  let topReviews: any[] = [];
   const realReviews = Array.isArray(product?.reviews) ? product.reviews : [];
-  topReviews = [...realReviews];
+  let topReviews: any[] = [...realReviews];
 
   const merchantReviews = [
     { source: 'Fnac', text: product.fnac_rev, author: 'Acheteur vérifié' },
@@ -121,43 +120,15 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
   ].filter(r => r.text && r.text.trim() !== '');
 
   merchantReviews.forEach((m, idx) => {
-    if (topReviews.length < 3) {
-      topReviews.push({
-        id: `merchant-${m.source}-${idx}`,
-        author_name: m.author,
-        review_text: m.text,
-        rating: 4.5,
-        source: m.source,
-        isAI: false
-      });
-    }
-  });
-
-  if (topReviews.length < 3 && summary?.review_text) {
-    const aiTexts = summary.review_text;
-    for (let i = 0; i < aiTexts.length && topReviews.length < 3; i++) {
-      topReviews.push({
-        id: `ai-fill-${i}`,
-        author_name: `Expert IA ${i + 1}`,
-        review_text: aiTexts[i],
-        rating: summary.rating || 4,
-        source: "Synthèse Avisscore",
-        isAI: true
-      });
-    }
-  }
-
-  if (topReviews.length < 3) {
-    const fallbackText = product.review_text || product.description || "Analyse technique exhaustive en attente de validation finale par nos experts.";
     topReviews.push({
-      id: 'expert-fallback',
-      author_name: "Verdict Final",
-      review_text: fallbackText,
-      rating: product.score || 8,
-      source: "Avisscore Labs",
-      isAI: true
+      id: `merchant-${m.source}-${idx}`,
+      author_name: m.author,
+      review_text: m.text,
+      rating: 4.5,
+      source: m.source,
+      isAI: false
     });
-  }
+  });
 
   topReviews = topReviews.slice(0, 3);
 
@@ -176,9 +147,9 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
             <h2 className="text-3xl font-black text-slate-900 tracking-tighter">Avis du Produit</h2>
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-3">
-                <span className={`w-2 h-2 ${realReviews.length >= 3 || merchantReviews.length >= 3 ? 'bg-emerald-500' : 'bg-blue-500'} rounded-full animate-pulse`}></span>
+                <span className={`w-2 h-2 ${topReviews.length > 0 ? 'bg-emerald-500' : 'bg-slate-300'} rounded-full`}></span>
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">
-                  {merchantReviews.length > 0 ? "Validation Marchands Certifiée" : "Analyse Hybride Experts & IA"}
+                  {topReviews.length > 0 ? "Contenu réel identifié" : "En attente d'avis clients"}
                 </span>
               </div>
               {product.external_rating && (
@@ -204,11 +175,17 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
-          {topReviews.map((rev) => (
-            <ProductReviewCard key={rev.id} review={rev} />
-          ))}
-        </div>
+        {topReviews.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+            {topReviews.map((rev) => (
+              <ProductReviewCard key={rev.id} review={rev} />
+            ))}
+          </div>
+        ) : (
+          <div className="py-12 text-center text-slate-400 font-bold uppercase tracking-widest text-xs italic bg-slate-50 rounded-3xl border border-slate-100">
+            Aucun avis disponible pour ce produit.
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
@@ -219,7 +196,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
           <div className="relative z-10 mb-10 flex items-center justify-between border-b border-slate-200 pb-6">
             <h2 className="text-3xl font-black text-slate-900 tracking-tighter flex items-center gap-4">
               <i className="fas fa-layer-group text-blue-600"></i>
-              Analyse <span className="text-blue-600 italic">8K Digital</span>
+              Analyse <span className="text-blue-600 italic">Détaillée</span>
             </h2>
           </div>
           
@@ -231,15 +208,17 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Points Forts</h3>
-                  <p className="text-[9px] text-emerald-500 font-black uppercase tracking-[0.2em] leading-none mt-1">Avantages Validés</p>
+                  <p className="text-[9px] text-emerald-500 font-black uppercase tracking-[0.2em] leading-none mt-1">Avantages</p>
                 </div>
               </div>
               <ul className="space-y-4">
-                {pointsForts.map((p, i) => (
+                {pointsForts.length > 0 ? pointsForts.map((p, i) => (
                   <li key={i} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-emerald-500/30 hover:shadow-emerald-500/10 transition-all duration-300 border-l-4 border-l-emerald-500">
                     <span className="text-sm font-bold text-slate-700 leading-tight">{String(p)}</span>
                   </li>
-                ))}
+                )) : (
+                  <li className="text-slate-400 text-xs italic font-bold uppercase tracking-widest p-4">Non renseigné</li>
+                )}
               </ul>
             </div>
 
@@ -250,15 +229,17 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Points Faibles</h3>
-                  <p className="text-[9px] text-rose-500 font-black uppercase tracking-[0.2em] leading-none mt-1">Limites Systèmes</p>
+                  <p className="text-[9px] text-rose-500 font-black uppercase tracking-[0.2em] leading-none mt-1">Limites</p>
                 </div>
               </div>
               <ul className="space-y-4">
-                {pointsFaibles.map((p, i) => (
+                {pointsFaibles.length > 0 ? pointsFaibles.map((p, i) => (
                   <li key={i} className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-rose-500/30 hover:shadow-rose-500/10 transition-all duration-300 border-l-4 border-l-rose-500">
                     <span className="text-sm font-bold text-slate-700 leading-tight">{String(p)}</span>
                   </li>
-                ))}
+                )) : (
+                  <li className="text-slate-400 text-xs italic font-bold uppercase tracking-widest p-4">Non renseigné</li>
+                )}
               </ul>
             </div>
           </div>
@@ -272,7 +253,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
                   <i className="fas fa-right-left text-xs"></i>
                 </div>
                 <div>
-                  <span className="block text-[8px] font-black text-blue-600 uppercase tracking-widest mb-0.5">Alternative Recommandée</span>
+                  <span className="block text-[8px] font-black text-blue-600 uppercase tracking-widest mb-0.5">Alternative</span>
                   <span className="block text-xs font-black text-slate-800 tracking-tight">{alternativeStr.split('-')[0].trim()}</span>
                 </div>
               </div>
@@ -311,11 +292,11 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
               <div className="w-12 h-12 bg-blue-600/20 rounded-2xl flex items-center justify-center border border-blue-500/30">
                 <i className="fas fa-microchip text-blue-400 text-2xl"></i>
               </div>
-              Spécifications <span className="text-blue-500 italic">Ultra</span>
+              Spécifications
             </h3>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 relative z-10">
-            {ficheTechnique.map((f, i) => {
+            {ficheTechnique.length > 0 ? ficheTechnique.map((f, i) => {
               const parts = String(f).split(':');
               const keyName = parts[0]?.trim() || "Module";
               const valueName = parts.slice(1).join(':').trim() || "Information";
@@ -335,18 +316,20 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
                   </div>
                 </div>
               );
-            })}
+            }) : (
+              <div className="col-span-full p-8 text-center text-slate-500 font-bold uppercase tracking-widest text-xs italic">Aucune fiche technique renseignée.</div>
+            )}
           </div>
         </div>
 
         <div className="lg:col-span-5 space-y-8 flex flex-col">
           <div className="bg-white rounded-[3rem] border border-slate-100 p-10 shadow-xl flex flex-col">
             <h3 className="text-2xl font-black text-slate-900 mb-8 flex items-center gap-4">
-              <i className="fas fa-gavel text-blue-600"></i> Verdict Expert
+              <i className="fas fa-gavel text-blue-600"></i> Description
             </h3>
             <div className="flex-1 relative mb-10">
               <p className="text-slate-600 leading-relaxed text-lg font-medium italic">
-                {summary?.review_text?.[0] || product?.review_text || product?.description || "L'analyse française certifiée est en cours de déploiement."}
+                {summary?.review_text?.[0] || product?.review_text || product?.description || "Aucune description détaillée n'est disponible pour le moment."}
               </p>
             </div>
             {cycleDeVie.length > 0 && (
@@ -367,11 +350,8 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
             )}
             <div className="mt-8 pt-8 border-t border-slate-50 flex items-center justify-between">
               <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                <i className="fas fa-fingerprint text-blue-500"></i> Authentifié par Avisscore Neural
+                <i className="fas fa-fingerprint text-blue-500"></i> Authentifié par Avisscore
               </div>
-              <span className="bg-blue-600 text-white px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest">
-                Expert Choice
-              </span>
             </div>
           </div>
         </div>
