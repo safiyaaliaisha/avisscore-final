@@ -23,12 +23,9 @@ export const fetchHomeProducts = async (limit = 4): Promise<Product[]> => {
 
 /**
  * Récupère les derniers avis.
- * Selon la demande utilisateur : Récupère les 4 derniers produits et utilise 
- * fnac_rev ou darty_rev comme contenu d'avis, avec la colonne rating pour la note.
  */
 export const fetchLatestCommunityReviews = async (limit = 4): Promise<any[]> => {
   try {
-    // On récupère d'abord les produits pour extraire les revues marchandes comme "avis récents"
     const { data: prodData, error } = await supabase
       .from('products')
       .select('name, image_url, category, product_slug, fnac_rev, darty_rev, rating, created_at')
@@ -37,7 +34,6 @@ export const fetchLatestCommunityReviews = async (limit = 4): Promise<any[]> => 
       .limit(limit);
 
     if (error || !prodData || prodData.length === 0) {
-      // Fallback au cas où même fnac/darty sont vides (on prend le verdict expert)
       const { data: fallbackData } = await supabase
         .from('products')
         .select('name, image_url, category, product_slug, review_text, rating, created_at')
@@ -63,17 +59,15 @@ export const fetchLatestCommunityReviews = async (limit = 4): Promise<any[]> => 
       return [];
     }
 
-    // Mapping des données vers le format attendu par le composant Review
     return prodData.map((p, i) => {
       const rawText = p.fnac_rev || p.darty_rev || "";
-      // Extraction d'un court extrait
       const extract = rawText.length > 160 ? rawText.substring(0, 157) + "..." : rawText;
 
       return {
         id: `recent-product-rev-${i}`,
-        author_name: "Acheteur vérifié", // Remplacé "Acheteur Fnac/Darty" par "Acheteur vérifié"
+        author_name: "Acheteur vérifié",
         review_text: extract,
-        rating: p.rating || 4, // Utilise la colonne rating de la DB
+        rating: p.rating || 4,
         created_at: p.created_at || new Date().toISOString(),
         products: {
           name: p.name,
@@ -90,7 +84,7 @@ export const fetchLatestCommunityReviews = async (limit = 4): Promise<any[]> => 
 };
 
 /**
- * Récupère un produit complet avec ses avis associés.
+ * Récupère un produit complet avec ses avis associés et explicitement la colonne faq.
  */
 export const fetchFullProductData = async (
   identifier: string, 
@@ -98,7 +92,8 @@ export const fetchFullProductData = async (
   category?: string
 ): Promise<{ data: Product | null; error: any }> => {
   try {
-    let query = supabase.from('products').select('*, reviews(*)');
+    // Explicitly requesting faq to avoid any selection omission issues
+    let query = supabase.from('products').select('*, reviews(*), faq');
     
     if (type === 'id') {
       query = query.eq('id', identifier);
@@ -114,7 +109,7 @@ export const fetchFullProductData = async (
     const { data, error } = await query.maybeSingle();
 
     if (error) {
-      let fallbackQuery = supabase.from('products').select('*');
+      let fallbackQuery = supabase.from('products').select('*, faq');
       if (type === 'id') fallbackQuery = fallbackQuery.eq('id', identifier);
       else if (type === 'slug') fallbackQuery = fallbackQuery.ilike('product_slug', identifier);
       else fallbackQuery = fallbackQuery.ilike('name', `%${identifier}%`);

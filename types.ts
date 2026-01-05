@@ -21,6 +21,13 @@ export interface Analysis {
   version_precedente?: string;
 }
 
+export interface FAQItem {
+  question: string;
+  answer: string;
+  q?: string; // Support for alternate naming
+  a?: string; // Support for alternate naming
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -37,10 +44,11 @@ export interface Product {
   points_faibles?: string[];
   fiche_technique?: string[];
   cycle_de_vie?: string[];
-  alternative?: string; // Ajout du champ alternative
+  alternative?: string; 
   score?: number;
   reviews?: Review[];
   analysis?: Analysis;
+  faq?: FAQItem[] | string; // New field for FAQ
   // Marchands
   fnac_rev?: string;
   darty_rev?: string;

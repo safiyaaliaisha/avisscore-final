@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Product, ProductSummary } from '../types';
+import { Product, ProductSummary, FAQItem } from '../types';
 import { ReviewCard } from '../components/ReviewCard';
 
 interface ProductDetailsProps {
@@ -14,28 +14,44 @@ interface ProductDetailsProps {
 const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, popularProducts, onBack }) => {
   if (!product) return null;
 
-  // Rating Logic: Avisscore uses a 0-10 scale. 
-  // We prefer the expert score, then manual rating (converted from 5 to 10), then fallback to 8.5.
+  // Rating Logic
   const ratingValue = product.score || (product.rating ? product.rating * 2 : 8.5);
-  
-  // Review Count Logic: Default to 100 if missing or zero to ensure rich snippets.
   const reviewCount = (product.reviews?.length || 0) > 0 ? product.reviews!.length : 100;
 
-  // FAQ Data Logic
-  const faqs = [
-    {
-      q: `Quelle est la note de ${product.name} ?`,
-      a: `L'IA Avisscore lui attribue une note de ${ratingValue.toFixed(1)}/10 basée sur l'analyse de ${reviewCount} avis.`
-    },
-    {
-      q: `${product.name} est-il un bon choix ?`,
-      a: `Oui, avec un score de ${ratingValue.toFixed(1)}/10, ce produit est considéré comme ${ratingValue > 7 ? 'excellent' : 'moyen'} par notre algorithme.`
-    },
-    {
-      q: `Où trouver le meilleur prix pour ${product.name} ?`,
-      a: `Nous analysons plusieurs marchands pour vous offrir la meilleure comparaison en temps réel sur Avisscore.`
+  // FAQ Data Logic: Prioritize DB faq column, then fallback to generated content
+  let faqs: { q: string; a: string }[] = [];
+
+  try {
+    if (product.faq) {
+      const rawFaqs = typeof product.faq === 'string' ? JSON.parse(product.faq) : product.faq;
+      if (Array.isArray(rawFaqs) && rawFaqs.length > 0) {
+        faqs = rawFaqs.map((item: any) => ({
+          q: item.question || item.q || "Question sans titre",
+          a: item.answer || item.a || "Réponse non disponible"
+        }));
+      }
     }
-  ];
+  } catch (e) {
+    console.error("Error parsing product.faq:", e);
+  }
+
+  // Fallback to generated questions if DB faq is empty or missing
+  if (faqs.length === 0) {
+    faqs = [
+      {
+        q: `Quelle est la note de ${product.name} ?`,
+        a: `L'IA Avisscore lui attribue une note de ${ratingValue.toFixed(1)}/10 basée sur l'analyse de ${reviewCount} avis.`
+      },
+      {
+        q: `${product.name} est-il un bon choix ?`,
+        a: `Oui, avec un score de ${ratingValue.toFixed(1)}/10, ce produit est considéré comme ${ratingValue > 7 ? 'excellent' : 'moyen'} par notre algorithme.`
+      },
+      {
+        q: `Où trouver le meilleur prix pour ${product.name} ?`,
+        a: `Nous analysons plusieurs marchands pour vous offrir la meilleure comparaison en temps réel sur Avisscore.`
+      }
+    ];
+  }
 
   const productSchema = {
     "@context": "https://schema.org/",
