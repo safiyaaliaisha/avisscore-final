@@ -4,11 +4,11 @@ import { supabase } from './lib/supabaseClient';
 import { fetchFullProductData, fetchHomeProducts, fetchLatestCommunityReviews } from './services/productService';
 import { getAIReviewSummary } from './services/geminiService';
 import { Product, ProductSummary } from './types';
-import { ReviewCard } from './components/ReviewCard';
 import { LegalPage } from './components/LegalPages';
 import { FeaturePage } from './components/FeaturePages';
 import { NotFound } from './components/NotFound';
 import { CookieConsent } from './components/CookieConsent';
+import ProductDetails from './pages/ProductDetails';
 
 const StarRating = ({ rating, size = "xs" }: { rating: number; size?: string }) => {
   return (
@@ -63,44 +63,6 @@ export default function App() {
       metaDescriptionTag.setAttribute('content', description);
     }
   }, [view, selectedProduct, aiSummary]);
-
-  // Gestion du balisage Schema.org JSON-LD
-  useEffect(() => {
-    const existingScript = document.getElementById('schema-ld-json');
-    if (existingScript) {
-      existingScript.remove();
-    }
-
-    if (view === 'detail' && selectedProduct) {
-      const ratingValue = selectedProduct.external_rating || selectedProduct.rating || selectedProduct.score || 4.5;
-      const reviewCount = selectedProduct.external_review_count || (selectedProduct.reviews?.length || 10);
-
-      const jsonLd = {
-        "@context": "https://schema.org/",
-        "@type": "Product",
-        "name": selectedProduct.name,
-        "image": selectedProduct.image_url,
-        "description": selectedProduct.seo_description || selectedProduct.description,
-        "brand": {
-          "@type": "Brand",
-          "name": "Avisscore"
-        },
-        "aggregateRating": {
-          "@type": "AggregateRating",
-          "ratingValue": String(ratingValue),
-          "bestRating": "5",
-          "worstRating": "1",
-          "reviewCount": String(reviewCount)
-        }
-      };
-
-      const script = document.createElement('script');
-      script.id = 'schema-ld-json';
-      script.type = 'application/ld+json';
-      script.text = JSON.stringify(jsonLd);
-      document.head.appendChild(script);
-    }
-  }, [view, selectedProduct]);
 
   const loadHomeData = useCallback(async () => {
     setIsLoading(true);
@@ -186,7 +148,6 @@ export default function App() {
           setView('home');
           loadHomeData();
         } else {
-          // Pour éviter les flashs, on ne passe en not-found que si ce n'est pas un changement vers l'accueil
           setView('not-found');
           setIsLoading(false);
           setSelectedProduct(null);
@@ -206,12 +167,11 @@ export default function App() {
   const navigateTo = (newView: ViewState) => {
     const hash = newView === 'home' ? '#/' : `#/${newView}`;
     
-    // Reset state before navigation
     if (newView === 'home') {
       setSelectedProduct(null);
       setError(null);
       setAiSummary(null);
-      setIsLoading(true); // Prépare le chargement des produits de l'accueil
+      setIsLoading(true);
     }
     
     window.location.hash = hash;
@@ -414,18 +374,12 @@ export default function App() {
                   <button onClick={() => navigateTo('home')} className="bg-[#0F172A] text-white px-12 py-5 rounded-2xl font-black uppercase tracking-widest shadow-2xl hover:bg-blue-600 transition-all active:scale-95">Retour</button>
                 </div>
             ) : (
-              <div className="space-y-12">
-                <ReviewCard 
-                  product={selectedProduct} 
-                  summary={aiSummary}
-                  relatedProducts={popularProducts.filter(p => p.id !== (selectedProduct?.id)).slice(0, 3)}
-                />
-                <div className="flex justify-center pb-24">
-                  <button onClick={() => navigateTo('home')} className="bg-white border border-slate-200 text-slate-400 font-black uppercase tracking-[0.4em] text-[10px] px-12 py-5 rounded-[2rem] hover:text-blue-600 hover:border-blue-600 shadow-lg hover:shadow-2xl transition-all flex items-center gap-5">
-                    <i className="fas fa-arrow-left"></i> Retour au Catalogue
-                  </button>
-                </div>
-              </div>
+              <ProductDetails 
+                product={selectedProduct} 
+                summary={aiSummary} 
+                popularProducts={popularProducts}
+                onBack={() => navigateTo('home')}
+              />
             )}
           </main>
         )}
