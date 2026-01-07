@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabaseClient';
 import { fetchFullProductData, fetchHomeProducts, fetchLatestCommunityReviews } from './services/productService';
 import { getAIReviewSummary } from './services/geminiService';
@@ -22,6 +23,7 @@ const StarRating = ({ rating, size = "xs" }: { rating: number; size?: string }) 
 type ViewState = 'home' | 'detail' | 'privacy' | 'cookies' | 'terms' | 'analyses-ia' | 'comparateur' | 'api-pro' | 'contact' | 'not-found';
 
 export default function App() {
+  const location = useLocation();
   const [view, setView] = useState<ViewState>('home');
   const [query, setQuery] = useState('');
   const [popularProducts, setPopularProducts] = useState<Product[]>([]);
@@ -32,6 +34,7 @@ export default function App() {
   const [isHomeLoading, setIsHomeLoading] = useState(true);
 
   const loadHomeData = useCallback(async () => {
+    setIsHomeLoading(true);
     try {
       const [prods, revs] = await Promise.all([
         fetchHomeProducts(4),
@@ -110,8 +113,10 @@ export default function App() {
   }, [handleProductSelection]);
 
   useEffect(() => {
-    if (view === 'home') loadHomeData();
-  }, [view, loadHomeData]);
+    if (view === 'home') {
+      loadHomeData();
+    }
+  }, [view, loadHomeData, location.key]);
 
   const formatTimeAgo = (dateStr: string) => {
     if (!dateStr) return "RÉCEMMENT";
