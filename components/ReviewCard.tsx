@@ -1,5 +1,6 @@
-
-import React from 'react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { HelpCircle, ChevronDown, Sparkles } from 'lucide-react';
 import { Product, ProductSummary, Review } from '../types';
 
 interface ReviewCardProps {
@@ -8,6 +9,7 @@ interface ReviewCardProps {
   isAnalyzing?: boolean;
   relatedProducts?: Product[];
   recentReviews?: Product[];
+  faqs?: { q: string, a: string }[];
 }
 
 const StarRating = ({ rating, size = "xs" }: { rating: number; size?: string }) => (
@@ -97,7 +99,9 @@ const ProductReviewCard: React.FC<{ review: Partial<Review> & { isAI?: boolean }
   );
 };
 
-export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnalyzing, relatedProducts = [], recentReviews = [] }) => {
+export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnalyzing, relatedProducts = [], recentReviews = [], faqs = [] }) => {
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
+  
   const expertScore = product?.score || product?.analysis?.score || 0;
   const userScore = product?.rating || summary?.rating || 0;
   const globalScore = expertScore > 0 ? (expertScore * 0.6 + userScore * 2 * 0.4) : (userScore > 0 ? userScore * 2 : 0);
@@ -282,6 +286,71 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
           </div>
         </div>
       </div>
+
+      {/* SECTION FAQ - Déplacée au-dessus des spécifications */}
+      {faqs.length > 0 && (
+        <section className="relative py-24 overflow-hidden bg-slate-900 rounded-[3rem] shadow-2xl">
+          <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#3b82f6 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
+          
+          <div className="max-w-4xl mx-auto px-6 relative z-10">
+            <div className="text-center mb-16 space-y-4">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                className="inline-flex items-center gap-2 bg-blue-600/20 text-blue-400 px-4 py-2 rounded-full border border-blue-500/20"
+              >
+                <Sparkles size={14} />
+                <span className="text-[10px] font-black uppercase tracking-[0.3em]">IA Analysis FAQ</span>
+              </motion.div>
+              <h2 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-tight">
+                Questions <span className="text-blue-500 italic">Fréquentes</span>
+              </h2>
+            </div>
+            
+            <div className="space-y-4">
+              {faqs.map((faq, i) => (
+                <motion.div 
+                  key={`faq-${i}`}
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className={`group rounded-3xl border transition-all duration-500 overflow-hidden ${openFaq === i ? "bg-slate-800/60 border-blue-500/50 shadow-blue-500/10 shadow-2xl" : "bg-slate-800/20 border-white/5 hover:border-white/10"}`}
+                >
+                  <button 
+                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                    className="w-full p-8 flex items-center justify-between text-left gap-6"
+                  >
+                    <div className="flex items-center gap-6">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 ${openFaq === i ? "bg-blue-600 text-white" : "bg-white/5 text-slate-500"}`}>
+                        <HelpCircle size={20} />
+                      </div>
+                      <h3 className={`text-lg font-black transition-colors ${openFaq === i ? "text-white" : "text-slate-300"}`}>{faq.q}</h3>
+                    </div>
+                    <ChevronDown className={`text-slate-500 transition-transform duration-500 ${openFaq === i ? "rotate-180 text-blue-500" : ""}`} size={20} />
+                  </button>
+                  
+                  <AnimatePresence>
+                    {openFaq === i && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.4, ease: "easeInOut" }}
+                      >
+                        <div className="px-8 pb-8 pl-[5.5rem]">
+                          <p className="text-slate-400 font-medium leading-relaxed italic text-lg border-l-2 border-blue-500/30 pl-6">
+                            "{faq.a}"
+                          </p>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         <div className="lg:col-span-7 bg-[#0F172A] rounded-[3rem] p-10 shadow-2xl relative overflow-hidden border border-blue-500/20">
