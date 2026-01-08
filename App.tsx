@@ -8,6 +8,7 @@ import { LegalPage } from './components/LegalPages';
 import { FeaturePage } from './components/FeaturePages';
 import { NotFound } from './components/NotFound';
 import { CookieConsent } from './components/CookieConsent';
+import { Navbar } from './components/Navbar';
 import ProductDetails from './pages/ProductDetails';
 
 const StarRating = ({ rating, size = "xs" }: { rating: number; size?: string }) => {
@@ -128,22 +129,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-slate-900">
-      <nav className="bg-[#0F172A] h-20 flex items-center sticky top-0 z-50 shrink-0 border-b border-white/5 shadow-xl">
-        <div className="max-w-7xl mx-auto px-6 w-full flex justify-between items-center">
-          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigateTo('home')}>
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-              <i className="fas fa-check-double text-white"></i>
-            </div>
-            <span className="text-white font-black text-2xl tracking-tighter">Avis<span className="text-blue-400 italic">score</span></span>
-          </div>
-          <div className="hidden lg:flex gap-8 text-slate-400 text-[10px] font-black uppercase tracking-widest items-center">
-            <span onClick={() => navigateTo('home')} className={`hover:text-white cursor-pointer transition-colors ${view === 'home' ? 'text-white underline underline-offset-8 decoration-blue-500' : ''}`}>ACCUEIL</span>
-            <span onClick={() => navigateTo('comparateur')} className={`hover:text-white cursor-pointer transition-colors ${view === 'comparateur' ? 'text-white' : ''}`}>COMPARATEUR</span>
-            <span onClick={() => navigateTo('analyses-ia')} className={`hover:text-white cursor-pointer transition-colors ${view === 'analyses-ia' ? 'text-white' : ''}`}>ANALYSES IA</span>
-            <span onClick={() => navigateTo('api-pro')} className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-500 cursor-pointer shadow-lg shadow-blue-600/20 active:scale-95 transition-all">API PRO</span>
-          </div>
-        </div>
-      </nav>
+      <Navbar onNavigate={navigateTo} activeView={view} />
 
       <div className="flex-1">
         {view === 'home' && (
