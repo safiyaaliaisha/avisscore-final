@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HelpCircle, ChevronDown, Sparkles } from 'lucide-react';
+import { HelpCircle, ChevronDown, Sparkles, ExternalLink, Flame } from 'lucide-react';
 import { Product, ProductSummary, Review } from '../types';
 
 interface ReviewCardProps {
@@ -107,6 +107,9 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
   const globalScore = expertScore > 0 ? (expertScore * 0.6 + userScore * 2 * 0.4) : (userScore > 0 ? userScore * 2 : 0);
   const ratingText = globalScore > 0 ? globalScore.toFixed(1) : "N/A";
 
+  const discount = product.current_price && product.reference_price ? Math.round(((product.reference_price - product.current_price) / product.reference_price) * 100) : 0;
+  const hasPriceError = discount >= 50;
+
   const pointsForts = Array.isArray(summary?.points_forts) && summary.points_forts.length > 0 ? summary.points_forts : (Array.isArray(product?.points_forts) ? product.points_forts : []);
   const pointsFaibles = Array.isArray(summary?.points_faibles) && summary.points_faibles.length > 0 ? summary.points_faibles : (Array.isArray(product?.points_faibles) ? product.points_faibles : []);
   const ficheTechnique = Array.isArray(summary?.fiche_technique) && summary.fiche_technique.length > 0 ? summary.fiche_technique : (Array.isArray(product?.fiche_technique) ? product.fiche_technique : []);
@@ -167,7 +170,8 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
               )}
             </div>
           </div>
-          <div className="flex items-center gap-6 p-4 bg-[#0F172A] rounded-2xl shadow-xl border border-white/5">
+          
+          <div className="flex items-center gap-6 p-5 bg-[#0F172A] rounded-2xl shadow-xl border border-white/5">
             <div className="flex flex-col items-center">
               <StarRating rating={globalScore / 2} size="xs" />
               <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest mt-1">Score Final</span>
@@ -249,108 +253,150 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
           </div>
         </div>
 
-        <div className="lg:col-span-4 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col items-center justify-center relative overflow-hidden group">
-          {alternativeStr && (
-            <div className="w-full mb-8 bg-blue-50/80 border border-blue-100 p-4 rounded-2xl flex items-center justify-between group/alt animate-in slide-in-from-top-4 duration-1000">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-                  <i className="fas fa-right-left text-xs"></i>
-                </div>
-                <div>
-                  <span className="block text-[8px] font-black text-blue-600 uppercase tracking-widest mb-0.5">Alternative</span>
-                  <span className="block text-xs font-black text-slate-800 tracking-tight">{alternativeStr.split('-')[0].trim()}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="mb-6 text-center w-full relative z-10">
-            <h1 className="text-3xl font-black text-slate-900 tracking-tighter mb-1 line-clamp-2 leading-tight">
-              {String(product?.name || 'Produit')}
-            </h1>
-            <span className="text-blue-600 font-black text-[10px] uppercase tracking-widest">
-              {String(product?.category || "Technologie")}
-            </span>
-          </div>
+        <div className="lg:col-span-4 bg-white p-10 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 flex flex-col relative overflow-hidden group">
           
-          <div className="relative w-full aspect-square flex items-center justify-center z-10">
+          <div className="relative w-full aspect-square flex items-center justify-center z-10 mb-8">
             {product?.image_url ? (
               <img 
                 src={product.image_url} 
                 alt={String(product?.name || 'Produit Avisscore')} 
-                className="relative max-h-full max-w-full object-contain drop-shadow-[0_25px_60px_rgba(0,0,0,0.15)] group-hover:scale-110 transition-transform duration-700" 
+                className="relative max-h-full max-w-full object-contain drop-shadow-[0_25px_60px_rgba(0,0,0,0.15)] group-hover:scale-105 transition-transform duration-700" 
               />
             ) : (
               <div className="text-slate-200 text-6xl"><i className="fas fa-image"></i></div>
             )}
           </div>
+
+          <div className="flex flex-col gap-6 w-full">
+            {alternativeStr && (
+              <div className="w-full bg-blue-50/80 border border-blue-100 p-4 rounded-2xl flex items-center justify-between group/alt animate-in slide-in-from-top-4 duration-1000">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                    <i className="fas fa-right-left text-xs"></i>
+                  </div>
+                  <div>
+                    <span className="block text-[8px] font-black text-blue-600 uppercase tracking-widest mb-0.5">Alternative</span>
+                    <span className="block text-xs font-black text-slate-800 tracking-tight">{alternativeStr.split('-')[0].trim()}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="text-center w-full relative z-10">
+              <h1 className="text-3xl font-black text-slate-900 tracking-tighter mb-1 line-clamp-2 leading-tight">
+                {String(product?.name || 'Produit')}
+              </h1>
+              <span className="text-blue-600 font-black text-[10px] uppercase tracking-widest">
+                {String(product?.category || "Technologie")}
+              </span>
+            </div>
+
+            {product.current_price && (
+              <div className={`w-full p-5 rounded-[2rem] border-2 transition-all duration-500 ${hasPriceError ? 'border-red-500 bg-red-50/30 ring-4 ring-red-500/10' : 'border-slate-100 bg-slate-50/50'}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex flex-col">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Prix Actuel</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-2xl font-black tracking-tighter ${hasPriceError ? 'text-red-600' : 'text-slate-900'}`}>
+                        {product.current_price.toFixed(2)}€
+                      </span>
+                      {product.reference_price && (
+                        <span className="text-slate-400 font-bold line-through text-sm">
+                          {product.reference_price.toFixed(2)}€
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {hasPriceError && (
+                    <div className="bg-red-600 text-white px-3 py-1.5 rounded-xl font-black text-[8px] uppercase tracking-tighter flex items-center gap-1.5 shadow-xl shadow-red-500/30 animate-pulse">
+                      <Flame size={12} />
+                      Erreur de Prix
+                    </div>
+                  )}
+                </div>
+                
+                {hasPriceError && (
+                  <p className="text-red-500 font-bold text-[9px] uppercase tracking-widest mb-3 italic animate-bounce text-center">
+                    ⏳ Dépêchez-vous ! Offre limitée
+                  </p>
+                )}
+
+                <a 
+                  href={product.affiliate_link || "#"} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className={`w-full py-3.5 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-xl transition-all hover:-translate-y-1 active:scale-95 ${hasPriceError ? 'bg-red-600 hover:bg-red-700 text-white shadow-red-500/20' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'}`}
+                >
+                  VOIR L'OFFRE AMAZON
+                  <ExternalLink size={14} />
+                </a>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* SECTION FAQ - Déplacée au-dessus des spécifications */}
-      {faqs.length > 0 && (
-        <section className="relative py-24 overflow-hidden bg-slate-900 rounded-[3rem] shadow-2xl">
-          <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#3b82f6 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
-          
-          <div className="max-w-4xl mx-auto px-6 relative z-10">
-            <div className="text-center mb-16 space-y-4">
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                className="inline-flex items-center gap-2 bg-blue-600/20 text-blue-400 px-4 py-2 rounded-full border border-blue-500/20"
-              >
-                <Sparkles size={14} />
-                <span className="text-[10px] font-black uppercase tracking-[0.3em]">IA Analysis FAQ</span>
-              </motion.div>
-              <h2 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-tight">
-                Questions <span className="text-blue-500 italic">Fréquentes</span>
-              </h2>
-            </div>
-            
-            <div className="space-y-4">
-              {faqs.map((faq, i) => (
-                <motion.div 
-                  key={`faq-${i}`}
-                  initial={{ opacity: 0, x: -20 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                  className={`group rounded-3xl border transition-all duration-500 overflow-hidden ${openFaq === i ? "bg-slate-800/60 border-blue-500/50 shadow-blue-500/10 shadow-2xl" : "bg-slate-800/20 border-white/5 hover:border-white/10"}`}
-                >
-                  <button 
-                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                    className="w-full p-8 flex items-center justify-between text-left gap-6"
-                  >
-                    <div className="flex items-center gap-6">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 ${openFaq === i ? "bg-blue-600 text-white" : "bg-white/5 text-slate-500"}`}>
-                        <HelpCircle size={20} />
-                      </div>
-                      <h3 className={`text-lg font-black transition-colors ${openFaq === i ? "text-white" : "text-slate-300"}`}>{faq.q}</h3>
-                    </div>
-                    <ChevronDown className={`text-slate-500 transition-transform duration-500 ${openFaq === i ? "rotate-180 text-blue-500" : ""}`} size={20} />
-                  </button>
-                  
-                  <AnimatePresence>
-                    {openFaq === i && (
-                      <motion.div 
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.4, ease: "easeInOut" }}
-                      >
-                        <div className="px-8 pb-8 pl-[5.5rem]">
-                          <p className="text-slate-400 font-medium leading-relaxed italic text-lg border-l-2 border-blue-500/30 pl-6">
-                            "{faq.a}"
-                          </p>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              ))}
-            </div>
+      <section className="relative py-24 overflow-hidden bg-slate-900 rounded-[3rem] shadow-2xl">
+        <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#3b82f6 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
+        
+        <div className="max-w-4xl mx-auto px-6 relative z-10">
+          <div className="text-center mb-16 space-y-4">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              className="inline-flex items-center gap-2 bg-blue-600/20 text-blue-400 px-4 py-2 rounded-full border border-blue-500/20"
+            >
+              <Sparkles size={14} />
+              <span className="text-[10px] font-black uppercase tracking-[0.3em]">IA Analysis FAQ</span>
+            </motion.div>
+            <h2 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-tight">
+              Questions <span className="text-blue-500 italic">Fréquentes</span>
+            </h2>
           </div>
-        </section>
-      )}
+          
+          <div className="space-y-4">
+            {faqs.map((faq, i) => (
+              <motion.div 
+                key={`faq-${i}`}
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className={`group rounded-3xl border transition-all duration-500 overflow-hidden ${openFaq === i ? "bg-slate-800/60 border-blue-500/50 shadow-blue-500/10 shadow-2xl" : "bg-slate-800/20 border-white/5 hover:border-white/10"}`}
+              >
+                <button 
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="w-full p-8 flex items-center justify-between text-left gap-6"
+                >
+                  <div className="flex items-center gap-6">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 ${openFaq === i ? "bg-blue-600 text-white" : "bg-white/5 text-slate-500"}`}>
+                      <HelpCircle size={20} />
+                    </div>
+                    <h3 className={`text-lg font-black transition-colors ${openFaq === i ? "text-white" : "text-slate-300"}`}>{faq.q}</h3>
+                  </div>
+                  <ChevronDown className={`text-slate-500 transition-transform duration-500 ${openFaq === i ? "rotate-180 text-blue-500" : ""}`} size={20} />
+                </button>
+                
+                <AnimatePresence>
+                  {openFaq === i && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.4, ease: "easeInOut" }}
+                    >
+                      <div className="px-8 pb-8 pl-[5.5rem]">
+                        <p className="text-slate-400 font-medium leading-relaxed italic text-lg border-l-2 border-blue-500/30 pl-6">
+                          "{faq.a}"
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         <div className="lg:col-span-7 bg-[#0F172A] rounded-[3rem] p-10 shadow-2xl relative overflow-hidden border border-blue-500/20">
@@ -394,19 +440,11 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
         <div className="lg:col-span-5 space-y-8 flex flex-col">
           <div className="bg-white rounded-[3rem] border border-slate-100 p-10 shadow-xl flex flex-col">
             <h3 className="text-2xl font-black text-slate-900 mb-8 flex items-center gap-4">
-              <i className="fas fa-gavel text-blue-600"></i> Description
+              <i className="fas fa-sync-alt text-blue-600"></i> Cycle de Vie
             </h3>
-            <div className="flex-1 relative mb-10">
-              <p className="text-slate-600 leading-relaxed text-lg font-medium italic">
-                {summary?.review_text?.[0] || product?.review_text || product?.description || "Aucune description détaillée n'est disponible pour le moment."}
-              </p>
-            </div>
-            {cycleDeVie.length > 0 && (
-              <div className="bg-blue-50/50 rounded-3xl p-6 border border-blue-100">
-                <div className="flex items-center gap-3 mb-4">
-                  <i className="fas fa-sync-alt text-blue-600 text-sm"></i>
-                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">Cycle de Vie</h4>
-                </div>
+            
+            {cycleDeVie.length > 0 ? (
+              <div className="bg-blue-50/50 rounded-3xl p-6 border border-blue-100 mb-6 flex-1">
                 <div className="space-y-3">
                   {cycleDeVie.map((step, idx) => (
                     <div key={idx} className="flex items-start gap-3">
@@ -416,7 +454,16 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
                   ))}
                 </div>
               </div>
+            ) : (
+              <div className="p-8 text-center text-slate-400 text-xs italic font-bold flex-1">Non renseigné.</div>
             )}
+
+            <div className="mt-2 pt-8 border-t border-slate-50">
+              <p className="text-slate-600 leading-relaxed text-sm font-medium italic">
+                {summary?.review_text?.[0] || product?.review_text || product?.description || "Aucune description détaillée n'est disponible pour le moment."}
+              </p>
+            </div>
+
             <div className="mt-8 pt-8 border-t border-slate-50 flex items-center justify-between">
               <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                 <i className="fas fa-fingerprint text-blue-500"></i> Authentifié par Avisscore

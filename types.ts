@@ -34,6 +34,9 @@ export interface Product {
   description: string;
   image_url: string;
   price?: number;
+  current_price?: number;
+  reference_price?: number;
+  affiliate_link?: string;
   category?: string;
   product_slug?: string;
   created_at?: string;

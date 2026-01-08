@@ -37,7 +37,7 @@ export default function App() {
     setIsHomeLoading(true);
     try {
       const [prods, revs] = await Promise.all([
-        fetchHomeProducts(4),
+        fetchHomeProducts(8), 
         fetchLatestCommunityReviews(4)
       ]);
       setPopularProducts(Array.isArray(prods) ? prods : []);
@@ -180,23 +180,74 @@ export default function App() {
                 {isHomeLoading && popularProducts.length === 0 ? (
                   [...Array(4)].map((_, i) => <div key={i} className="bg-white rounded-[2.5rem] p-8 border border-slate-100 animate-pulse h-80 shadow-sm"></div>)
                 ) : (
-                  popularProducts.map((p) => (
-                    <div 
-                      key={p.id} 
-                      onClick={() => navigateTo(`${p.category}/${p.product_slug}`)} 
-                      className="bg-white p-8 rounded-[2.5rem] border border-slate-50 shadow-xl shadow-slate-200/40 cursor-pointer hover:-translate-y-2 hover:shadow-2xl transition-all flex flex-col items-center group"
-                    >
-                      <div className="h-44 w-full flex items-center justify-center mb-8 overflow-hidden bg-slate-50 rounded-2xl">
-                        {p.image_url ? (
-                          <img src={p.image_url} alt={p.name} className="max-h-[80%] max-w-[80%] object-contain group-hover:scale-110 transition-transform duration-500 drop-shadow-md" />
-                        ) : (
-                          <i className="fas fa-image text-slate-200 text-4xl"></i>
+                  popularProducts.map((p) => {
+                    const discount = p.current_price && p.reference_price ? Math.round(((p.reference_price - p.current_price) / p.reference_price) * 100) : 0;
+                    const hasPriceError = discount >= 50;
+                    
+                    return (
+                      <div 
+                        key={p.id} 
+                        className={`bg-white p-8 rounded-[2.5rem] border ${hasPriceError ? 'border-red-500/30 ring-2 ring-red-500/10' : 'border-slate-50'} shadow-xl shadow-slate-200/40 transition-all flex flex-col items-center group relative overflow-hidden`}
+                      >
+                        {hasPriceError && (
+                          <div className="absolute top-4 left-4 z-20 bg-red-600 text-white px-3 py-1.5 rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-600/30 flex items-center gap-1.5 animate-bounce">
+                            <i className="fas fa-fire"></i>
+                            -{discount}%
+                          </div>
                         )}
+
+                        <div 
+                          onClick={() => navigateTo(`${p.category}/${p.product_slug}`)}
+                          className="w-full flex flex-col items-center cursor-pointer group/link"
+                        >
+                          <div className="h-44 w-full flex items-center justify-center mb-8 overflow-hidden bg-slate-50 rounded-2xl">
+                            {p.image_url ? (
+                              <img src={p.image_url} alt={p.name} className="max-h-[80%] max-w-[80%] object-contain group-hover/link:scale-110 transition-transform duration-500 drop-shadow-md" />
+                            ) : (
+                              <i className="fas fa-image text-slate-200 text-4xl"></i>
+                            )}
+                          </div>
+                          <h3 className="font-black text-sm text-slate-900 text-center group-hover/link:text-blue-600 mb-3 transition-colors line-clamp-2 px-2 h-10">{p.name}</h3>
+                        </div>
+                        
+                        <div className="mt-auto w-full flex flex-col items-center gap-4">
+                          {hasPriceError ? (
+                            <div className="flex flex-col items-center gap-1 w-full">
+                              <div className="flex items-center gap-2">
+                                <span className="text-red-600 font-black text-xl">{p.current_price?.toFixed(2)}€</span>
+                                <span className="text-slate-400 text-xs line-through font-bold">{p.reference_price?.toFixed(2)}€</span>
+                              </div>
+                              <p className="text-[9px] text-red-400 font-bold italic mb-1 text-center animate-pulse">
+                                ⏳ Dépêchez-vous ! Offre à durée limitée
+                              </p>
+                              {p.affiliate_link ? (
+                                <a 
+                                  href={p.affiliate_link} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="w-full bg-red-600 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest text-center shadow-lg hover:bg-red-700 hover:-translate-y-1 transition-all flex items-center justify-center gap-2"
+                                >
+                                  VOIR L'OFFRE ⚡
+                                </a>
+                              ) : (
+                                <button className="w-full bg-slate-100 text-slate-400 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest cursor-not-allowed">STOCK ÉPUISÉ</button>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="w-full flex flex-col items-center gap-4">
+                              <StarRating rating={p.score ? p.score / 2 : (p.rating || 4)} />
+                              <button 
+                                onClick={() => navigateTo(`${p.category}/${p.product_slug}`)}
+                                className="w-full bg-blue-600 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:bg-blue-500"
+                              >
+                                VOIR L'ANALYSE
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <h3 className="font-black text-sm text-slate-900 text-center group-hover:text-blue-600 mb-3 transition-colors line-clamp-2 px-2">{p.name}</h3>
-                      <div className="mt-auto"><StarRating rating={p.score ? p.score / 2 : (p.rating || 4)} /></div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </section>
@@ -261,9 +312,35 @@ export default function App() {
         {['analyses-ia', 'comparateur', 'api-pro', 'contact'].includes(view) && <main className="max-w-6xl mx-auto px-6 py-20"><FeaturePage type={view as any} onBack={() => navigateTo('home')} /></main>}
       </div>
 
-      <footer className="bg-white border-t border-slate-200 pt-24 pb-12">
-        <div className="max-w-7xl mx-auto px-6 text-center">
+      <footer className="bg-white border-t border-slate-200 pt-24 pb-12 mt-auto">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-16 text-center md:text-left">
+            <div className="space-y-6">
+              <div className="flex items-center justify-center md:justify-start gap-3 cursor-pointer group" onClick={() => navigateTo('home')}>
+                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                  <i className="fas fa-check-double text-white text-xs"></i>
+                </div>
+                <span className="text-slate-900 font-black text-xl tracking-tighter">Avis<span className="text-blue-600 italic">score</span></span>
+              </div>
+              <p className="text-slate-400 text-xs font-bold leading-relaxed max-w-xs mx-auto md:mx-0">Le hub ultime pour l'analyse neurale de produits high-tech et automobile.</p>
+            </div>
+            <div className="flex flex-col gap-4">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-900 mb-2">Plateforme</h4>
+              <span onClick={() => navigateTo('comparateur')} className="text-slate-400 hover:text-blue-600 cursor-pointer text-xs font-bold uppercase tracking-widest transition-colors">Comparateur</span>
+              <span onClick={() => navigateTo('analyses-ia')} className="text-slate-400 hover:text-blue-600 cursor-pointer text-xs font-bold uppercase tracking-widest transition-colors">Analyses IA</span>
+              <span onClick={() => navigateTo('api-pro')} className="text-slate-400 hover:text-blue-600 cursor-pointer text-xs font-bold uppercase tracking-widest transition-colors">API Pro</span>
+            </div>
+            <div className="flex flex-col gap-4">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-900 mb-2">Légal & Contact</h4>
+              <span onClick={() => navigateTo('contact')} className="text-slate-400 hover:text-blue-600 cursor-pointer text-xs font-bold uppercase tracking-widest transition-colors">Contact</span>
+              <span onClick={() => navigateTo('privacy')} className="text-slate-400 hover:text-blue-600 cursor-pointer text-xs font-bold uppercase tracking-widest transition-colors">Confidentialité</span>
+              <span onClick={() => navigateTo('cookies')} className="text-slate-400 hover:text-blue-600 cursor-pointer text-xs font-bold uppercase tracking-widest transition-colors">Cookies</span>
+              <span onClick={() => navigateTo('terms')} className="text-slate-400 hover:text-blue-600 cursor-pointer text-xs font-bold uppercase tracking-widest transition-colors">Mentions Légales</span>
+            </div>
+          </div>
+          <div className="pt-12 border-t border-slate-50 text-center">
             <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.4em]">© 2025 Avisscore Lab. Tous droits réservés.</p>
+          </div>
         </div>
       </footer>
       <CookieConsent />
