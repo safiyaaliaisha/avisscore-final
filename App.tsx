@@ -37,7 +37,7 @@ export default function App() {
     setIsHomeLoading(true);
     try {
       const [prods, revs] = await Promise.all([
-        fetchHomeProducts(8), 
+        fetchHomeProducts(4), 
         fetchLatestCommunityReviews(4)
       ]);
       setPopularProducts(Array.isArray(prods) ? prods : []);
@@ -238,7 +238,7 @@ export default function App() {
                               <StarRating rating={p.score ? p.score / 2 : (p.rating || 4)} />
                               <button 
                                 onClick={() => navigateTo(`${p.category}/${p.product_slug}`)}
-                                className="w-full bg-blue-600 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all shadow-lg hover:bg-blue-500"
+                                className="w-full bg-blue-600 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg hover:bg-blue-500"
                               >
                                 VOIR L'ANALYSE
                               </button>
