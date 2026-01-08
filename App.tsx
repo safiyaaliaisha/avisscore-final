@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabaseClient';
 import { fetchFullProductData, fetchHomeProducts, fetchLatestCommunityReviews } from './services/productService';
@@ -27,12 +27,16 @@ export default function App() {
   const location = useLocation();
   const [view, setView] = useState<ViewState>('home');
   const [query, setQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const [popularProducts, setPopularProducts] = useState<Product[]>([]);
   const [communityReviews, setCommunityReviews] = useState<any[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [aiSummary, setAiSummary] = useState<ProductSummary | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isHomeLoading, setIsHomeLoading] = useState(true);
+  const heroSearchRef = useRef<HTMLDivElement>(null);
 
   const loadHomeData = useCallback(async () => {
     setIsHomeLoading(true);
@@ -50,12 +54,40 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (heroSearchRef.current && !heroSearchRef.current.contains(e.target as Node)) {
+        setShowResults(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  useEffect(() => {
+    const performSearch = async () => {
+      if (query.length < 2) {
+        setSearchResults([]);
+        return;
+      }
+      const { data } = await supabase
+        .from('products')
+        .select('id, name, image_url, product_slug, category')
+        .ilike('name', `%${query}%`)
+        .limit(5);
+      if (data) setSearchResults(data);
+    };
+    const t = setTimeout(performSearch, 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
   const handleProductSelection = useCallback(async (target: string, type: 'id' | 'slug' | 'name' = 'name', category?: string) => {
     if (!target) return;
     setIsLoading(true);
     setAiSummary(null);
     setSelectedProduct(null);
     setView('detail');
+    setShowResults(false);
     
     try {
       const { data } = await fetchFullProductData(target, type, category);
@@ -127,6 +159,23 @@ export default function App() {
     return diff < 1 ? "RÉCEMMENT" : diff < 24 ? `IL Y A ${diff}H` : `IL Y A ${Math.floor(diff/24)}J`;
   };
 
+  const handleHeroKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      setSelectedIndex(p => p < searchResults.length - 1 ? p + 1 : p);
+    } else if (e.key === 'ArrowUp') {
+      setSelectedIndex(p => p > 0 ? p - 1 : p);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (selectedIndex >= 0 && searchResults[selectedIndex]) {
+        const p = searchResults[selectedIndex];
+        navigateTo(`${p.category}/${p.product_slug}`);
+      } else if (searchResults.length > 0) {
+        const p = searchResults[0];
+        navigateTo(`${p.category}/${p.product_slug}`);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-slate-900">
       <Navbar onNavigate={navigateTo} activeView={view} />
@@ -139,20 +188,54 @@ export default function App() {
               <div className="max-w-4xl mx-auto px-6 relative z-10">
                 <h1 className="text-white text-5xl md:text-7xl font-black mb-6 tracking-tight leading-tight">Le verdict expert<br/>auto & tech.</h1>
                 <p className="text-slate-400 mb-10 font-medium text-lg max-w-2xl mx-auto italic">Analyse immédiate de milliers de sources pour vous donner le score réel de chaque produit.</p>
-                <div className="bg-slate-800/30 p-2 rounded-2xl max-w-2xl mx-auto backdrop-blur-md border border-white/5 shadow-2xl">
-                  <form onSubmit={(e) => { e.preventDefault(); handleProductSelection(query); }} className="flex flex-col sm:flex-row gap-2">
-                    <div className="relative flex-1">
-                      <i className="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                      <input
-                        type="text"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Rechercher un iPhone, une PS5, ou une tablette..."
-                        className="w-full h-14 pl-14 pr-6 rounded-xl font-bold outline-none bg-white text-slate-900 border-2 border-transparent focus:border-blue-500 transition-all"
-                      />
+                
+                <div className="relative max-w-2xl mx-auto" ref={heroSearchRef}>
+                  <div className="bg-slate-800/30 p-2 rounded-2xl backdrop-blur-md border border-white/5 shadow-2xl">
+                    <form onSubmit={(e) => { 
+                      e.preventDefault(); 
+                      if (searchResults.length > 0) {
+                        const p = searchResults[0];
+                        navigateTo(`${p.category}/${p.product_slug}`);
+                      }
+                    }} className="flex flex-col sm:flex-row gap-2">
+                      <div className="relative flex-1">
+                        <i className="fas fa-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input
+                          type="text"
+                          value={query}
+                          onChange={(e) => { setQuery(e.target.value); setShowResults(true); }}
+                          onFocus={() => setShowResults(true)}
+                          onKeyDown={handleHeroKeyDown}
+                          placeholder="Rechercher un iPhone, une PS5, ou une tablette..."
+                          className="w-full h-14 pl-14 pr-6 rounded-xl font-bold outline-none bg-white text-slate-900 border-2 border-transparent focus:border-blue-500 transition-all"
+                        />
+                      </div>
+                      <button type="submit" className="bg-blue-600 text-white h-14 px-8 rounded-xl font-black uppercase tracking-widest shadow-lg hover:bg-blue-500 active:scale-95 transition-all shrink-0">ANALYSER</button>
+                    </form>
+                  </div>
+
+                  {/* Hero Search Results Dropdown */}
+                  {showResults && searchResults.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-3 bg-white border border-slate-200 rounded-[2rem] shadow-2xl overflow-hidden z-30 text-left animate-in fade-in slide-in-from-top-2 duration-300">
+                      {searchResults.map((p, idx) => (
+                        <div 
+                          key={p.id} 
+                          onClick={() => navigateTo(`${p.category}/${p.product_slug}`)}
+                          onMouseEnter={() => setSelectedIndex(idx)}
+                          className={`flex items-center gap-5 p-4 cursor-pointer transition-all ${idx === selectedIndex ? 'bg-blue-50 border-l-4 border-blue-600 pl-6' : 'hover:bg-slate-50'}`}
+                        >
+                          <div className="w-12 h-12 bg-white rounded-xl p-1 flex items-center justify-center border border-slate-100 shrink-0">
+                            <img src={p.image_url} alt={p.name} className="max-w-full max-h-full object-contain" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-black text-slate-900 text-sm leading-tight">{p.name}</h4>
+                            <p className="text-blue-600 text-[10px] font-black uppercase tracking-widest mt-1">{p.category}</p>
+                          </div>
+                          <i className="fas fa-arrow-right text-slate-300 text-xs"></i>
+                        </div>
+                      ))}
                     </div>
-                    <button type="submit" className="bg-blue-600 text-white h-14 px-8 rounded-xl font-black uppercase tracking-widest shadow-lg hover:bg-blue-500 active:scale-95 transition-all">ANALYSER</button>
-                  </form>
+                  )}
                 </div>
               </div>
             </div>

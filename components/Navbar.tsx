@@ -57,7 +57,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, activeView }) => {
   const handleProductClick = (product: SearchResult) => {
     setIsOpen(false);
     setQuery('');
-    // On utilise le slug pour la navigation comme demandé
     onNavigate(`${product.category}/${product.product_slug}`);
   };
 
@@ -89,44 +88,46 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, activeView }) => {
           <span className="text-white font-black text-2xl tracking-tighter hidden sm:inline">Avis<span className="text-blue-400 italic">score</span></span>
         </div>
 
-        {/* Search Bar */}
-        <div className="relative flex-1 max-w-md" ref={dropdownRef}>
-          <div className="relative group">
-            <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors"></i>
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => query.length >= 2 && setIsOpen(true)}
-              onKeyDown={handleKeyDown}
-              placeholder="Rechercher un produit..."
-              className="w-full h-11 pl-11 pr-4 bg-slate-800/50 border border-white/10 rounded-xl text-white text-sm font-bold outline-none focus:bg-slate-800 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-500"
-            />
-          </div>
-
-          {/* Results Dropdown */}
-          {isOpen && results.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-[#1E293B] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-              {results.map((product, index) => (
-                <div
-                  key={product.id}
-                  onClick={() => handleProductClick(product)}
-                  onMouseEnter={() => setSelectedIndex(index)}
-                  className={`flex items-center gap-4 p-3 cursor-pointer transition-colors ${index === selectedIndex ? 'bg-blue-600/20' : 'hover:bg-white/5'}`}
-                >
-                  <div className="w-10 h-10 bg-white rounded-lg p-1 flex items-center justify-center shrink-0">
-                    <img src={product.image_url} alt={product.name} className="max-w-full max-h-full object-contain" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white text-sm font-bold truncate">{product.name}</p>
-                    <p className="text-blue-400 text-[10px] font-black uppercase tracking-widest">{product.category}</p>
-                  </div>
-                  <i className="fas fa-chevron-right text-slate-600 text-[10px] mr-2"></i>
-                </div>
-              ))}
+        {/* Search Bar - Hidden on Home */}
+        {activeView !== 'home' ? (
+          <div className="relative flex-1 max-w-md" ref={dropdownRef}>
+            <div className="relative group">
+              <i className="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors"></i>
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => query.length >= 2 && setIsOpen(true)}
+                onKeyDown={handleKeyDown}
+                placeholder="Rechercher un produit..."
+                className="w-full h-11 pl-11 pr-4 bg-slate-800/50 border border-white/10 rounded-xl text-white text-sm font-bold outline-none focus:bg-slate-800 focus:border-blue-500/50 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-500"
+              />
             </div>
-          )}
-        </div>
+
+            {/* Results Dropdown */}
+            {isOpen && results.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-[#1E293B] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                {results.map((product, index) => (
+                  <div
+                    key={product.id}
+                    onClick={() => handleProductClick(product)}
+                    onMouseEnter={() => setSelectedIndex(index)}
+                    className={`flex items-center gap-4 p-3 cursor-pointer transition-colors ${index === selectedIndex ? 'bg-blue-600/20' : 'hover:bg-white/5'}`}
+                  >
+                    <div className="w-10 h-10 bg-white rounded-lg p-1 flex items-center justify-center shrink-0">
+                      <img src={product.image_url} alt={product.name} className="max-w-full max-h-full object-contain" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm font-bold truncate">{product.name}</p>
+                      <p className="text-blue-400 text-[10px] font-black uppercase tracking-widest">{product.category}</p>
+                    </div>
+                    <i className="fas fa-chevron-right text-slate-600 text-[10px] mr-2"></i>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : <div className="flex-1"></div>}
 
         {/* Navigation Links */}
         <div className="hidden lg:flex gap-8 text-slate-400 text-[10px] font-black uppercase tracking-widest items-center shrink-0">
