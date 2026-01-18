@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabaseClient';
 import { fetchFullProductData, fetchHomeProducts, fetchLatestCommunityReviews } from './services/productService';
@@ -36,13 +36,17 @@ export default function App() {
   const [aiSummary, setAiSummary] = useState<ProductSummary | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isHomeLoading, setIsHomeLoading] = useState(true);
+  
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showAllProducts, setShowAllProducts] = useState(false);
+  
   const heroSearchRef = useRef<HTMLDivElement>(null);
 
   const loadHomeData = useCallback(async () => {
     setIsHomeLoading(true);
     try {
       const [prods, revs] = await Promise.all([
-        fetchHomeProducts(4), 
+        fetchHomeProducts(24), 
         fetchLatestCommunityReviews(4)
       ]);
       setPopularProducts(Array.isArray(prods) ? prods : []);
@@ -53,6 +57,25 @@ export default function App() {
       setIsHomeLoading(false);
     }
   }, []);
+
+  const dynamicCategories = useMemo(() => {
+    const cats = popularProducts
+      .map(p => p.category)
+      .filter((cat): cat is string => !!cat && cat.trim() !== '');
+    return Array.from(new Set(cats)).sort();
+  }, [popularProducts]);
+
+  const filteredProducts = useMemo(() => {
+    let list = popularProducts;
+    if (selectedCategory) {
+      list = list.filter(p => p.category?.toLowerCase() === selectedCategory.toLowerCase());
+    }
+    return list;
+  }, [popularProducts, selectedCategory]);
+
+  const displayedProducts = useMemo(() => {
+    return showAllProducts ? filteredProducts : filteredProducts.slice(0, 4);
+  }, [filteredProducts, showAllProducts]);
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -109,7 +132,16 @@ export default function App() {
   }, []);
 
   const navigateTo = (newView: ViewState | string) => {
-    const hash = newView === 'home' ? '#/' : `#/${newView}`;
+    if (newView === 'home') {
+      setSelectedCategory(null);
+      setShowAllProducts(false);
+      setQuery('');
+      setView('home');
+      window.location.hash = '#/';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    const hash = `#/${newView}`;
     window.location.hash = hash;
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -177,7 +209,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-slate-900">
+    <div className="min-h-screen bg-[#f8f9fa] flex flex-col font-sans text-slate-900">
       <Navbar onNavigate={navigateTo} activeView={view} />
 
       <div className="flex-1">
@@ -189,7 +221,7 @@ export default function App() {
                 <h1 className="text-white text-5xl md:text-7xl font-black mb-6 tracking-tight leading-tight">Le verdict expert<br/>auto & tech.</h1>
                 <p className="text-slate-400 mb-10 font-medium text-lg max-w-2xl mx-auto italic">Analyse immédiate de milliers de sources pour vous donner le score réel de chaque produit.</p>
                 
-                <div className="relative max-w-2xl mx-auto" ref={heroSearchRef}>
+                <div className="relative max-w-2xl mx-auto mb-12" ref={heroSearchRef}>
                   <div className="bg-slate-800/30 p-2 rounded-2xl backdrop-blur-md border border-white/5 shadow-2xl">
                     <form onSubmit={(e) => { 
                       e.preventDefault(); 
@@ -214,7 +246,6 @@ export default function App() {
                     </form>
                   </div>
 
-                  {/* Hero Search Results Dropdown */}
                   {showResults && searchResults.length > 0 && (
                     <div className="absolute top-full left-0 right-0 mt-3 bg-white border border-slate-200 rounded-[2rem] shadow-2xl overflow-hidden z-30 text-left animate-in fade-in slide-in-from-top-2 duration-300">
                       {searchResults.map((p, idx) => (
@@ -237,26 +268,54 @@ export default function App() {
                     </div>
                   )}
                 </div>
+
+                <div className="flex flex-wrap justify-center gap-3 animate-in fade-in duration-1000 delay-500">
+                  {["Tout", ...dynamicCategories].map((cat) => (
+                    <button 
+                      key={cat}
+                      onClick={() => cat === "Tout" ? setSelectedCategory(null) : setSelectedCategory(prev => prev === cat ? null : cat)}
+                      className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all backdrop-blur-sm border ${
+                        (cat === "Tout" && selectedCategory === null) || (selectedCategory === cat)
+                          ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/30" 
+                          : "bg-white/5 hover:bg-white/10 border-white/10 text-white/70 hover:text-white"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
             <section className="max-w-7xl mx-auto px-6 pt-20 pb-12">
-              <h2 className="text-3xl font-black mb-12 flex items-center gap-4">
-                <span className="w-2 h-10 bg-blue-600 rounded-full"></span>
-                Produits Populaires
-              </h2>
+              <div className="flex items-center justify-between mb-12">
+                <h2 className="text-4xl font-black text-[#111] tracking-tighter flex items-center gap-4">
+                  <span className="w-2.5 h-10 bg-blue-600 rounded-full"></span>
+                  {selectedCategory ? `Produits : ${selectedCategory}` : "Produits Populaires"}
+                </h2>
+                <button 
+                  onClick={() => setShowAllProducts(!showAllProducts)}
+                  className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600 hover:text-blue-700 transition-all flex items-center gap-2 group"
+                >
+                  {showAllProducts ? "VOIR MOINS" : "VOIR TOUT"}
+                  <i className={`fas ${showAllProducts ? 'fa-chevron-up' : 'fa-arrow-right-long'} group-hover:translate-x-1 transition-transform`}></i>
+                </button>
+              </div>
+              
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                 {isHomeLoading && popularProducts.length === 0 ? (
-                  [...Array(4)].map((_, i) => <div key={i} className="bg-white rounded-[2.5rem] p-8 border border-slate-100 animate-pulse h-80 shadow-sm"></div>)
-                ) : (
-                  popularProducts.map((p) => {
-                    const discount = p.current_price && p.reference_price ? Math.round(((p.reference_price - p.current_price) / p.reference_price) * 100) : 0;
-                    const hasPriceError = discount >= 50;
+                  [...Array(4)].map((_, i) => <div key={i} className="bg-white rounded-[2.5rem] p-8 border border-slate-200 animate-pulse h-80 shadow-sm"></div>)
+                ) : displayedProducts.length > 0 ? (
+                  displayedProducts.map((p) => {
+                    const curPrice = Number(p.current_price) || 0;
+                    const refPrice = Number(p.reference_price) || 0;
+                    const discount = (curPrice > 0 && refPrice > 0) ? Math.round(((refPrice - curPrice) / refPrice) * 100) : 0;
+                    const hasPriceError = discount >= 50 && curPrice > 0;
                     
                     return (
                       <div 
                         key={p.id} 
-                        className={`bg-white p-8 rounded-[2.5rem] border ${hasPriceError ? 'border-red-500/30 ring-2 ring-red-500/10' : 'border-slate-50'} shadow-xl shadow-slate-200/40 transition-all flex flex-col items-center group relative overflow-hidden`}
+                        className={`bg-white p-8 rounded-[2.5rem] border ${hasPriceError ? 'border-red-500/30 ring-2 ring-red-500/10' : 'border-slate-200'} shadow-sm hover:shadow-md transition-all flex flex-col items-center group relative overflow-hidden`}
                       >
                         {hasPriceError && (
                           <div className="absolute top-4 left-4 z-20 bg-red-600 text-white px-3 py-1.5 rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-600/30 flex items-center gap-1.5 animate-bounce">
@@ -283,8 +342,8 @@ export default function App() {
                           {hasPriceError ? (
                             <div className="flex flex-col items-center gap-1 w-full">
                               <div className="flex items-center gap-2">
-                                <span className="text-red-600 font-black text-xl">{p.current_price?.toFixed(2)}€</span>
-                                <span className="text-slate-400 text-xs line-through font-bold">{p.reference_price?.toFixed(2)}€</span>
+                                <span className="text-red-600 font-black text-xl">{curPrice.toFixed(2)}€</span>
+                                {refPrice > 0 && <span className="text-slate-400 text-xs line-through font-bold">{refPrice.toFixed(2)}€</span>}
                               </div>
                               <p className="text-[9px] text-red-400 font-bold italic mb-1 text-center animate-pulse">
                                 ⏳ Dépêchez-vous ! Offre à durée limitée
@@ -317,14 +376,24 @@ export default function App() {
                       </div>
                     );
                   })
+                ) : (
+                  <div className="col-span-full py-20 text-center">
+                    <p className="text-slate-400 font-bold italic">Aucun produit trouvé dans cette catégorie.</p>
+                    <button 
+                      onClick={() => setSelectedCategory(null)}
+                      className="mt-4 text-blue-600 font-black text-[10px] uppercase tracking-widest hover:underline"
+                    >
+                      Effacer les filtres
+                    </button>
+                  </div>
                 )}
               </div>
             </section>
 
-            <section className="bg-slate-50 pt-20 pb-32 border-y border-slate-100">
+            <section className="bg-slate-100/30 pt-20 pb-32 border-y border-slate-200">
               <div className="max-w-7xl mx-auto px-6">
                 <div className="mb-16 text-center md:text-left">
-                  <h2 className="text-4xl font-black text-slate-900 tracking-tight mb-3">Avis Récents</h2>
+                  <h2 className="text-5xl font-black text-[#111] tracking-tighter mb-4">Avis Récents</h2>
                   <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">BASÉ SUR LES DERNIERS RETOURS MARCHANDS</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -335,7 +404,7 @@ export default function App() {
                       <div 
                         key={rev.id} 
                         onClick={() => navigateTo(`${rev.products?.category}/${rev.products?.product_slug}`)} 
-                        className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-50 cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all group h-full flex flex-col"
+                        className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-200 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all group h-full flex flex-col"
                       >
                         <div className="flex items-center gap-4 mb-6">
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs uppercase shadow-sm ${rev.author_name === "Acheteur vérifié" ? "bg-emerald-100 text-emerald-600" : "bg-blue-100 text-blue-600"}`}>

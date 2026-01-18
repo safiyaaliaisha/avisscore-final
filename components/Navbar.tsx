@@ -77,11 +77,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, activeView }) => {
     }
   };
 
+  const handleLogoClick = () => {
+    // Perform smooth navigation without forced reload
+    onNavigate('home');
+  };
+
   return (
     <nav className="bg-[#0F172A] h-20 flex items-center sticky top-0 z-50 shrink-0 border-b border-white/5 shadow-xl">
       <div className="max-w-7xl mx-auto px-6 w-full flex justify-between items-center gap-6">
         {/* Logo */}
-        <div className="flex items-center gap-3 cursor-pointer group shrink-0" onClick={() => onNavigate('home')}>
+        <div className="flex items-center gap-3 cursor-pointer group shrink-0" onClick={handleLogoClick}>
           <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
             <i className="fas fa-check-double text-white"></i>
           </div>
@@ -131,7 +136,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, activeView }) => {
 
         {/* Navigation Links */}
         <div className="hidden lg:flex gap-8 text-slate-400 text-[10px] font-black uppercase tracking-widest items-center shrink-0">
-          <span onClick={() => onNavigate('home')} className={`hover:text-white cursor-pointer transition-colors ${activeView === 'home' ? 'text-white underline underline-offset-8 decoration-blue-500' : ''}`}>ACCUEIL</span>
+          <span onClick={handleLogoClick} className={`hover:text-white cursor-pointer transition-colors ${activeView === 'home' ? 'text-white underline underline-offset-8 decoration-blue-500' : ''}`}>ACCUEIL</span>
           <span onClick={() => onNavigate('comparateur')} className={`hover:text-white cursor-pointer transition-colors ${activeView === 'comparateur' ? 'text-white' : ''}`}>COMPARATEUR</span>
           <span onClick={() => onNavigate('analyses-ia')} className={`hover:text-white cursor-pointer transition-colors ${activeView === 'analyses-ia' ? 'text-white' : ''}`}>ANALYSES IA</span>
           <span onClick={() => onNavigate('api-pro')} className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-500 cursor-pointer shadow-lg shadow-blue-600/20 active:scale-95 transition-all">API PRO</span>

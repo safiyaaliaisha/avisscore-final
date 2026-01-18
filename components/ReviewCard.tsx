@@ -107,8 +107,10 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
   const globalScore = expertScore > 0 ? (expertScore * 0.6 + userScore * 2 * 0.4) : (userScore > 0 ? userScore * 2 : 0);
   const ratingText = globalScore > 0 ? globalScore.toFixed(1) : "N/A";
 
-  const discount = product.current_price && product.reference_price ? Math.round(((product.reference_price - product.current_price) / product.reference_price) * 100) : 0;
-  const hasPriceError = discount >= 50;
+  const curPrice = Number(product.current_price) || 0;
+  const refPrice = Number(product.reference_price) || 0;
+  const discount = (curPrice > 0 && refPrice > 0) ? Math.round(((refPrice - curPrice) / refPrice) * 100) : 0;
+  const hasPriceError = discount >= 50 && curPrice > 0;
 
   const pointsForts = Array.isArray(summary?.points_forts) && summary.points_forts.length > 0 ? summary.points_forts : (Array.isArray(product?.points_forts) ? product.points_forts : []);
   const pointsFaibles = Array.isArray(summary?.points_faibles) && summary.points_faibles.length > 0 ? summary.points_faibles : (Array.isArray(product?.points_faibles) ? product.points_faibles : []);
@@ -197,7 +199,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-        <div className="lg:col-span-8 flex flex-col bg-[#F8FAFC] p-10 rounded-[3rem] border border-slate-200 shadow-2xl relative overflow-hidden group/pros">
+        <div className="lg:col-span-8 flex flex-col bg-[#f8f9fa] p-10 rounded-[3rem] border border-slate-200 shadow-2xl relative overflow-hidden group/pros">
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] pointer-events-none"></div>
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-rose-500/5 blur-[100px] pointer-events-none"></div>
           
@@ -291,18 +293,19 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
               </span>
             </div>
 
-            {product.current_price && (
+            {/* Price section - Only show if price > 0 */}
+            {curPrice > 0 && (
               <div className={`w-full p-5 rounded-[2rem] border-2 transition-all duration-500 ${hasPriceError ? 'border-red-500 bg-red-50/30 ring-4 ring-red-500/10' : 'border-slate-100 bg-slate-50/50'}`}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex flex-col">
                     <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Prix Actuel</span>
                     <div className="flex items-center gap-2">
                       <span className={`text-2xl font-black tracking-tighter ${hasPriceError ? 'text-red-600' : 'text-slate-900'}`}>
-                        {product.current_price.toFixed(2)}€
+                        {curPrice.toFixed(2)}€
                       </span>
-                      {product.reference_price && (
+                      {refPrice > 0 && (
                         <span className="text-slate-400 font-bold line-through text-sm">
-                          {product.reference_price.toFixed(2)}€
+                          {refPrice.toFixed(2)}€
                         </span>
                       )}
                     </div>
@@ -321,15 +324,17 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
                   </p>
                 )}
 
-                <a 
-                  href={product.affiliate_link || "#"} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className={`w-full py-3.5 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-xl transition-all hover:-translate-y-1 active:scale-95 ${hasPriceError ? 'bg-red-600 hover:bg-red-700 text-white shadow-red-500/20' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'}`}
-                >
-                  VOIR L'OFFRE AMAZON
-                  <ExternalLink size={14} />
-                </a>
+                {product.affiliate_link && (
+                  <a 
+                    href={product.affiliate_link} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className={`w-full py-3.5 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-xl transition-all hover:-translate-y-1 active:scale-95 ${hasPriceError ? 'bg-red-600 hover:bg-red-700 text-white shadow-red-500/20' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'}`}
+                  >
+                    VOIR L'OFFRE AMAZON
+                    <ExternalLink size={14} />
+                  </a>
+                )}
               </div>
             )}
           </div>
