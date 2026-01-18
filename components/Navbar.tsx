@@ -21,6 +21,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, activeView }) => {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Réinitialisation forcée si on retourne sur l'accueil
+  useEffect(() => {
+    if (activeView === 'home') {
+      setQuery('');
+      setResults([]);
+      setIsOpen(false);
+    }
+  }, [activeView]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -78,7 +87,6 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, activeView }) => {
   };
 
   const handleLogoClick = () => {
-    // Perform smooth navigation without forced reload
     onNavigate('home');
   };
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { supabase } from './lib/supabaseClient';
 import { fetchFullProductData, fetchHomeProducts, fetchLatestCommunityReviews } from './services/productService';
 import { getAIReviewSummary } from './services/geminiService';
@@ -38,7 +39,8 @@ export default function App() {
   const [isHomeLoading, setIsHomeLoading] = useState(true);
   
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [showAllProducts, setShowAllProducts] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(4);
+  const [showAllActive, setShowAllActive] = useState(false);
   
   const heroSearchRef = useRef<HTMLDivElement>(null);
 
@@ -46,7 +48,7 @@ export default function App() {
     setIsHomeLoading(true);
     try {
       const [prods, revs] = await Promise.all([
-        fetchHomeProducts(24), 
+        fetchHomeProducts(100), // On récupère une large base pour le scroll infini/chargement progressif
         fetchLatestCommunityReviews(4)
       ]);
       setPopularProducts(Array.isArray(prods) ? prods : []);
@@ -74,8 +76,12 @@ export default function App() {
   }, [popularProducts, selectedCategory]);
 
   const displayedProducts = useMemo(() => {
-    return showAllProducts ? filteredProducts : filteredProducts.slice(0, 4);
-  }, [filteredProducts, showAllProducts]);
+    return filteredProducts.slice(0, showAllActive ? visibleCount : 4);
+  }, [filteredProducts, visibleCount, showAllActive]);
+
+  const handleLoadMore = () => {
+    setVisibleCount(prev => prev + 8);
+  };
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -133,9 +139,15 @@ export default function App() {
 
   const navigateTo = (newView: ViewState | string) => {
     if (newView === 'home') {
+      // Nettoyage complet des états pour un reset parfait
       setSelectedCategory(null);
-      setShowAllProducts(false);
+      setVisibleCount(4);
+      setShowAllActive(false);
       setQuery('');
+      setSearchResults([]);
+      setShowResults(false);
+      setSelectedProduct(null);
+      setAiSummary(null);
       setView('home');
       window.location.hash = '#/';
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -210,6 +222,9 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] flex flex-col font-sans text-slate-900">
+      <Helmet>
+        <title>Avisscore - Le verdict expert auto & tech</title>
+      </Helmet>
       <Navbar onNavigate={navigateTo} activeView={view} />
 
       <div className="flex-1">
@@ -294,11 +309,11 @@ export default function App() {
                   {selectedCategory ? `Produits : ${selectedCategory}` : "Produits Populaires"}
                 </h2>
                 <button 
-                  onClick={() => setShowAllProducts(!showAllProducts)}
+                  onClick={() => setShowAllActive(!showAllActive)}
                   className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600 hover:text-blue-700 transition-all flex items-center gap-2 group"
                 >
-                  {showAllProducts ? "VOIR MOINS" : "VOIR TOUT"}
-                  <i className={`fas ${showAllProducts ? 'fa-chevron-up' : 'fa-arrow-right-long'} group-hover:translate-x-1 transition-transform`}></i>
+                  {showAllActive ? "RETOUR" : "VOIR TOUT"}
+                  <i className={`fas ${showAllActive ? 'fa-chevron-up' : 'fa-arrow-right-long'} group-hover:translate-x-1 transition-transform`}></i>
                 </button>
               </div>
               
@@ -315,7 +330,7 @@ export default function App() {
                     return (
                       <div 
                         key={p.id} 
-                        className={`bg-white p-8 rounded-[2.5rem] border ${hasPriceError ? 'border-red-500/30 ring-2 ring-red-500/10' : 'border-slate-200'} shadow-sm hover:shadow-md transition-all flex flex-col items-center group relative overflow-hidden`}
+                        className={`bg-white p-8 rounded-[2.5rem] border ${hasPriceError ? 'border-red-500/30 ring-2 ring-red-500/10' : 'border-slate-200'} shadow-sm hover:shadow-md transition-all flex flex-col items-center group relative overflow-hidden animate-in fade-in`}
                       >
                         {hasPriceError && (
                           <div className="absolute top-4 left-4 z-20 bg-red-600 text-white px-3 py-1.5 rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-600/30 flex items-center gap-1.5 animate-bounce">
@@ -388,6 +403,19 @@ export default function App() {
                   </div>
                 )}
               </div>
+
+              {/* Bouton Charger Plus pour le scroll infini contrôlé */}
+              {showAllActive && displayedProducts.length < filteredProducts.length && (
+                <div className="flex justify-center mt-16">
+                  <button 
+                    onClick={handleLoadMore}
+                    className="bg-white border-2 border-slate-200 text-slate-900 font-black px-12 py-4 rounded-2xl text-xs uppercase tracking-[0.3em] hover:border-blue-600 hover:text-blue-600 transition-all shadow-xl active:scale-95 flex items-center gap-4"
+                  >
+                    CHARGER PLUS
+                    <i className="fas fa-plus"></i>
+                  </button>
+                </div>
+              )}
             </section>
 
             <section className="bg-slate-100/30 pt-20 pb-32 border-y border-slate-200">
