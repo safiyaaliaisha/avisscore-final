@@ -1,6 +1,6 @@
 
 import { supabase } from '../lib/supabaseClient';
-import { Product } from '../types';
+import { Product, Deal } from '../types';
 
 /**
  * Récupère les derniers produits pour la page d'accueil
@@ -17,6 +17,25 @@ export const fetchHomeProducts = async (limit = 4): Promise<Product[]> => {
     return (data as Product[]) || [];
   } catch (error) {
     console.error("Erreur fetchHomeProducts:", error);
+    return [];
+  }
+};
+
+/**
+ * Récupère les bons plans (deals) depuis la table deals.
+ */
+export const fetchDeals = async (limit = 4): Promise<Deal[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('deals')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return (data as Deal[]) || [];
+  } catch (error) {
+    console.error("Erreur fetchDeals:", error);
     return [];
   }
 };

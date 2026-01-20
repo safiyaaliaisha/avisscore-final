@@ -28,6 +28,17 @@ export interface FAQItem {
   a?: string;
 }
 
+export interface Deal {
+  id: string;
+  title: string;
+  current_price: number;
+  reference_price: number;
+  discount: number;
+  link: string;
+  image_url: string;
+  created_at?: string;
+}
+
 export interface Product {
   id: string;
   name: string;

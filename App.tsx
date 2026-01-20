@@ -2,9 +2,9 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from './lib/supabaseClient';
-import { fetchFullProductData, fetchHomeProducts, fetchLatestCommunityReviews } from './services/productService';
+import { fetchFullProductData, fetchHomeProducts, fetchLatestCommunityReviews, fetchDeals } from './services/productService';
 import { getAIReviewSummary } from './services/geminiService';
-import { Product, ProductSummary } from './types';
+import { Product, ProductSummary, Deal } from './types';
 import { LegalPage } from './components/LegalPages';
 import { FeaturePage } from './components/FeaturePages';
 import { NotFound } from './components/NotFound';
@@ -32,6 +32,7 @@ export default function App() {
   const [showResults, setShowResults] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [popularProducts, setPopularProducts] = useState<Product[]>([]);
+  const [liveDeals, setLiveDeals] = useState<Deal[]>([]);
   const [communityReviews, setCommunityReviews] = useState<any[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [aiSummary, setAiSummary] = useState<ProductSummary | null>(null);
@@ -47,12 +48,14 @@ export default function App() {
   const loadHomeData = useCallback(async () => {
     setIsHomeLoading(true);
     try {
-      const [prods, revs] = await Promise.all([
-        fetchHomeProducts(100), // On récupère une large base pour le scroll infini/chargement progressif
-        fetchLatestCommunityReviews(4)
+      const [prods, revs, deals] = await Promise.all([
+        fetchHomeProducts(100),
+        fetchLatestCommunityReviews(4),
+        fetchDeals(8)
       ]);
       setPopularProducts(Array.isArray(prods) ? prods : []);
       setCommunityReviews(Array.isArray(revs) ? revs : []);
+      setLiveDeals(Array.isArray(deals) ? deals : []);
     } catch (e) {
       console.error("Home loading error:", e);
     } finally {
@@ -139,7 +142,6 @@ export default function App() {
 
   const navigateTo = (newView: ViewState | string) => {
     if (newView === 'home') {
-      // Nettoyage complet des états pour un reset parfait
       setSelectedCategory(null);
       setVisibleCount(4);
       setShowAllActive(false);
@@ -203,6 +205,14 @@ export default function App() {
     return diff < 1 ? "RÉCEMMENT" : diff < 24 ? `IL Y A ${diff}H` : `IL Y A ${Math.floor(diff/24)}J`;
   };
 
+  const getDiscountBadgeColor = (discount: number) => {
+    if (discount >= 70) return 'bg-purple-600 shadow-purple-500/50 text-white';
+    if (discount >= 60) return 'bg-red-600 shadow-red-500/50 text-white';
+    if (discount >= 50) return 'bg-orange-600 shadow-orange-500/50 text-white';
+    if (discount >= 40) return 'bg-green-500 shadow-green-500/50 text-white';
+    return 'bg-blue-600 shadow-blue-500/50 text-white';
+  };
+
   const handleHeroKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       setSelectedIndex(p => p < searchResults.length - 1 ? p + 1 : p);
@@ -223,7 +233,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#f8f9fa] flex flex-col font-sans text-slate-900">
       <Helmet>
-        <title>Avisscore - Le verdict expert auto & tech</title>
+        <title>{view === 'home' ? 'Avisscore - Le verdict expert auto & tech' : (selectedProduct ? `${selectedProduct.name} - Avisscore` : 'Avisscore')}</title>
       </Helmet>
       <Navbar onNavigate={navigateTo} activeView={view} />
 
@@ -404,7 +414,6 @@ export default function App() {
                 )}
               </div>
 
-              {/* Bouton Charger Plus pour le scroll infini contrôlé */}
               {showAllActive && displayedProducts.length < filteredProducts.length && (
                 <div className="flex justify-center mt-16">
                   <button 
@@ -416,6 +425,55 @@ export default function App() {
                   </button>
                 </div>
               )}
+            </section>
+
+            {/* LIVE DEALS SECTION */}
+            <section className="max-w-7xl mx-auto px-6 py-20">
+               <div className="flex items-center justify-between mb-12">
+                  <div className="flex flex-col gap-2">
+                    <h2 className="text-4xl font-black text-[#111] tracking-tighter flex items-center gap-4">
+                      <span className="w-2.5 h-10 bg-rose-600 rounded-full"></span>
+                      Bons Plans en Direct
+                    </h2>
+                    <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">LES MEILLEURES OFFRES DU MOMENT ANALYSÉES</p>
+                  </div>
+               </div>
+
+               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                  {isHomeLoading && liveDeals.length === 0 ? (
+                    [...Array(4)].map((_, i) => <div key={i} className="bg-white rounded-[2rem] p-8 h-80 animate-pulse border border-slate-100 shadow-sm"></div>)
+                  ) : liveDeals.map((deal) => (
+                    <div key={deal.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col items-center group relative overflow-hidden">
+                       <div className={`absolute top-4 left-4 z-20 px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg flex items-center gap-1.5 ${getDiscountBadgeColor(deal.discount)}`}>
+                         <i className="fas fa-tag"></i>
+                         -{deal.discount}%
+                       </div>
+
+                       <div className="h-44 w-full flex items-center justify-center mb-6 overflow-hidden bg-slate-50 rounded-2xl relative">
+                          <img src={deal.image_url} alt={deal.title} className="max-h-[80%] max-w-[80%] object-contain group-hover:scale-110 transition-transform duration-700" />
+                       </div>
+
+                       <h3 className="font-black text-xs text-slate-900 text-center mb-4 line-clamp-2 px-2 h-8">{deal.title}</h3>
+
+                       <div className="mt-auto w-full flex flex-col items-center gap-4">
+                          <div className="flex items-center gap-3">
+                             <span className="text-rose-600 font-black text-xl">{deal.current_price?.toFixed(2)}€</span>
+                             <span className="text-slate-400 text-xs line-through font-bold">{deal.reference_price?.toFixed(2)}€</span>
+                          </div>
+
+                          <a 
+                            href={deal.link} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] text-center shadow-lg hover:bg-rose-600 transition-all flex items-center justify-center gap-2 group/btn"
+                          >
+                            VOIR L'OFFRE
+                            <i className="fas fa-external-link-alt text-[10px] group-hover/btn:translate-x-1 transition-transform"></i>
+                          </a>
+                       </div>
+                    </div>
+                  ))}
+               </div>
             </section>
 
             <section className="bg-slate-100/30 pt-20 pb-32 border-y border-slate-200">
