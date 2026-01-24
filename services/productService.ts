@@ -42,6 +42,7 @@ export const fetchDeals = async (limit = 4): Promise<Deal[]> => {
 
 /**
  * Récupère les derniers avis réels depuis la base de données.
+ * Mise à jour : Remplacement d'Acheteur vérifié par Résumé web pour plus d'honnêteté.
  */
 export const fetchLatestCommunityReviews = async (limit = 4): Promise<any[]> => {
   try {
@@ -62,9 +63,10 @@ export const fetchLatestCommunityReviews = async (limit = 4): Promise<any[]> => 
 
       return {
         id: `recent-product-rev-${i}`,
-        author_name: "Acheteur vérifié",
+        author_name: "Résumé web",
         review_text: extract,
         rating: p.rating || 4,
+        source: p.fnac_rev ? "Fnac" : "Darty",
         created_at: p.created_at || new Date().toISOString(),
         products: {
           name: p.name,

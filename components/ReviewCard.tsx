@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HelpCircle, ChevronDown, Sparkles, ExternalLink, Flame, Info, Globe, ShoppingBag } from 'lucide-react';
@@ -29,7 +30,9 @@ const getSpecIcon = (key: string) => {
 };
 
 const StarRating = ({ rating, size = "xs", sourceName }: { rating: number; size?: string; sourceName?: string }) => {
-  if (rating <= 0) return null;
+  // Hide stars if it's a guess (AI) or no valid rating
+  if (rating <= 0 || sourceName?.toLowerCase().includes('avisscore')) return null;
+  
   return (
     <div className="flex items-center gap-2">
       <div className={`flex text-amber-500 gap-0.5 text-${size}`}>
@@ -49,7 +52,7 @@ const getMerchantLogo = (source: string) => {
   if (s.includes('boulanger')) return { color: 'bg-[#F06C00]', icon: 'B', name: 'Boulanger', url: 'https://www.boulanger.com' };
   if (s.includes('rakuten')) return { color: 'bg-[#BF0000]', icon: 'R', name: 'Rakuten', url: 'https://fr.shopping.rakuten.com' };
   if (s.includes('amazon')) return { color: 'bg-[#232F3E]', icon: 'A', name: 'Amazon', url: 'https://www.amazon.fr' };
-  if (s.includes('ia') || s.includes('neural') || s.includes('avisscore')) return { color: 'bg-blue-600', icon: <Sparkles size={14} />, name: 'IA Avisscore', url: '#' };
+  if (s.includes('ia') || s.includes('neural') || s.includes('avisscore')) return { color: 'bg-blue-600', icon: <Sparkles size={14} />, name: 'Avisscore IA', url: '#' };
   return { color: 'bg-slate-500', icon: 'W', name: 'Web', url: '#' };
 };
 
@@ -57,7 +60,8 @@ const ProductReviewCard: React.FC<{ review: Partial<Review> & { isAI?: boolean }
   const sourceName = review.source || (review.isAI ? "Avisscore IA" : "Web");
   const merchant = getMerchantLogo(sourceName);
   
-  const cleanText = (review.review_text || "").replace(/[""«»]/g, '').trim();
+  // Clean quotes from review text
+  const cleanText = (review.review_text || "Analyse en cours pour ce modèle").replace(/[""«»]/g, '').trim();
 
   const sourceColors: Record<string, string> = {
     fnac: 'border-[#F29100]/30 hover:bg-[#F29100]/5',
@@ -94,7 +98,7 @@ const ProductReviewCard: React.FC<{ review: Partial<Review> & { isAI?: boolean }
       <div className="space-y-4 pt-4 border-t border-slate-50">
         <div className="flex items-center justify-between">
           <StarRating rating={review.rating || 0} sourceName={merchant.name} />
-          <span className="text-slate-900 font-black text-[11px]">{review.rating ? `${review.rating}/5` : ""}</span>
+          <span className="text-slate-900 font-black text-[11px]">{review.rating && !review.isAI ? `${review.rating}/5` : ""}</span>
         </div>
         
         {!review.isAI && (
@@ -118,7 +122,8 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
   
   const expertScore = product?.score || product?.analysis?.score || 0;
   const userScore = product?.rating || summary?.rating || 0;
-  const globalScore = expertScore > 0 ? (expertScore * 0.6 + userScore * 2 * 0.4) : (userScore > 0 ? userScore * 2 : 0);
+  // Use scale of 10
+  const globalScore = summary?.rating || (expertScore > 0 ? expertScore : (userScore > 0 ? userScore * 2 : 0));
   const ratingText = globalScore > 0 ? globalScore.toFixed(1) : "N/A";
 
   const curPrice = Number(product.current_price) || 0;
@@ -129,7 +134,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
   const pointsForts = (summary?.points_forts || product?.points_forts || []).map(p => String(p).replace(/[""«»]/g, ''));
   const pointsFaibles = (summary?.points_faibles || product?.points_faibles || []).map(p => String(p).replace(/[""«»]/g, ''));
   const ficheTechnique = Array.isArray(summary?.fiche_technique) && summary.fiche_technique.length > 0 ? summary.fiche_technique : (Array.isArray(product?.fiche_technique) ? product.fiche_technique : []);
-  const cycleDeVie = Array.isArray(summary?.cycle_de_vie) && summary.cycle_de_vie.length > 0 ? summary.cycle_de_vie : (Array.isArray(product?.cycle_de_vie) ? product.cycle_de_vie : []);
+  const cycleDeVie = (summary?.cycle_de_vie || product?.cycle_de_vie || ["Analyse en cours pour ce modèle"]).map(step => String(step).replace(/[""«»]/g, ''));
   const alternativeStr = summary?.alternative || product?.alternative;
 
   const realReviews = Array.isArray(product?.reviews) ? product.reviews : [];
@@ -159,7 +164,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-1000 relative">
       
-      {/* Disclaimer Banner - UPDATED: Static (relative) positioning, no sticky/fixed behavior */}
+      {/* Disclaimer Banner - STATIC positioning as requested */}
       <div className="relative w-full bg-amber-50 border-l-4 border-amber-500 p-5 rounded-2xl flex items-center gap-4 shadow-sm">
         <div className="bg-amber-100 p-2.5 rounded-xl text-amber-600 shrink-0">
           <Info size={20} />
@@ -195,7 +200,6 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
           
           <div className="flex items-center gap-6 p-5 bg-[#0F172A] rounded-2xl shadow-xl border border-white/5">
             <div className="flex flex-col items-center">
-              <StarRating rating={globalScore / 2} size="xs" />
               <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest mt-1">Score AVISSCORE</span>
             </div>
             <div className="h-10 w-px bg-white/10"></div>
@@ -314,12 +318,6 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
                       )}
                     </div>
                   </div>
-                  {hasPriceError && (
-                    <div className="bg-red-600 text-white px-3 py-1.5 rounded-xl font-black text-[8px] uppercase tracking-tighter flex items-center gap-1.5 shadow-xl shadow-red-500/30 animate-pulse">
-                      <Flame size={12} />
-                      Erreur de Prix
-                    </div>
-                  )}
                 </div>
                 
                 {product.affiliate_link && (
@@ -463,7 +461,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
 
             <div className="mt-2 pt-8 border-t border-slate-50">
               <p className="text-slate-600 leading-relaxed text-sm font-medium italic">
-                {String(summary?.review_text?.[0] || product?.review_text || product?.description || "").replace(/[""«»]/g, '') || "Aucune description détaillée n'est disponible pour le moment."}
+                {String(summary?.review_text?.[0] || product?.review_text || product?.description || "").replace(/[""«»]/g, '') || "Analyse en cours pour ce modèle"}
               </p>
             </div>
 

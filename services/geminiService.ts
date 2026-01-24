@@ -17,8 +17,13 @@ export const getAIReviewSummary = async (productName: string, reviews: Review[])
 MISSION : Synthétiser les avis clients en FRANÇAIS de haute qualité.
 RÈGLE D'OR : Même si les avis sources sont en anglais ou dans une autre langue, ta réponse doit être à 100% en FRANÇAIS fluide et professionnel.
 
+CONSIGNES DE CALCUL ET CONTENU :
+1. RATING : Retourne obligatoirement une note sur une échelle de 10 (ex: 4.5/5 devient 9.0). Si aucune donnée, retourne 0.0.
+2. SANS GUILLEMETS : Ne mets jamais de guillemets (") ou de chevrons (« ») dans les textes générés.
+3. PLACEHOLDERS : Si une information est manquante pour 'review_text' ou 'cycle_de_vie', n'écris jamais "NULL". Utilise "Analyse en cours pour ce modèle".
+
 STRUCTURE DU JSON :
-- rating : score moyen calculé à partir des avis (1-5).
+- rating : score moyen calculé à partir des avis (0-10).
 - review_text : tableau de EXACTEMENT 4 phrases de synthèse réelle en français (ton expert).
 - cycle_de_vie : tableau de EXACTEMENT 4 étapes de vie du produit basées sur l'usure mentionnée.
 - points_forts : tableau de EXACTEMENT 3 points positifs réels.
@@ -59,14 +64,13 @@ ${reviewsContext}`;
       }
     });
 
-    // Extract text output using the .text property as recommended
     const jsonStr = response.text?.trim();
     if (!jsonStr) {
       throw new Error("No content generated");
     }
 
     const data = JSON.parse(jsonStr);
-    return { ...data, sentiment: data.rating >= 4 ? "Excellent" : "Correct" } as ProductSummary;
+    return { ...data, sentiment: data.rating >= 8 ? "Excellent" : "Correct" } as ProductSummary;
   } catch (error) {
     console.error("Gemini Error:", error);
     return null;
