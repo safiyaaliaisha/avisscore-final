@@ -22,6 +22,16 @@ const StarRating = ({ rating, size = "xs" }: { rating: number; size?: string }) 
   );
 };
 
+const getMerchantLogo = (source: string) => {
+  const s = source.toLowerCase();
+  if (s.includes('fnac')) return { color: 'bg-[#F29100]', icon: 'F', name: 'Fnac' };
+  if (s.includes('darty')) return { color: 'bg-[#E30613]', icon: 'D', name: 'Darty' };
+  if (s.includes('boulanger')) return { color: 'bg-[#F06C00]', icon: 'B', name: 'Boulanger' };
+  if (s.includes('rakuten')) return { color: 'bg-[#BF0000]', icon: 'R', name: 'Rakuten' };
+  if (s.includes('amazon')) return { color: 'bg-[#232F3E]', icon: 'A', name: 'Amazon' };
+  return { color: 'bg-slate-400', icon: 'W', name: 'Web' };
+};
+
 type ViewState = 'home' | 'detail' | 'privacy' | 'cookies' | 'terms' | 'analyses-ia' | 'comparateur' | 'api-pro' | 'contact' | 'not-found';
 
 export default function App() {
@@ -486,29 +496,32 @@ export default function App() {
                   {isHomeLoading && communityReviews.length === 0 ? (
                     [...Array(4)].map((_, i) => <div key={i} className="bg-white rounded-[2.5rem] p-8 h-72 animate-pulse shadow-sm"></div>)
                   ) : (
-                    communityReviews.map((rev) => (
-                      <div 
-                        key={rev.id} 
-                        onClick={() => navigateTo(`${rev.products?.category}/${rev.products?.product_slug}`)} 
-                        className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-200 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all group h-full flex flex-col"
-                      >
-                        <div className="flex items-center gap-4 mb-6">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs uppercase shadow-sm ${rev.author_name === "Acheteur vérifié" ? "bg-emerald-100 text-emerald-600" : "bg-blue-100 text-blue-600"}`}>
-                            {rev.author_name?.charAt(0)}
+                    communityReviews.map((rev) => {
+                      const merchant = getMerchantLogo(rev.source || 'Web');
+                      return (
+                        <div 
+                          key={rev.id} 
+                          onClick={() => navigateTo(`${rev.products?.category}/${rev.products?.product_slug}`)} 
+                          className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-200 cursor-pointer hover:shadow-md hover:-translate-y-1 transition-all group h-full flex flex-col"
+                        >
+                          <div className="flex items-center gap-4 mb-6">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-xs uppercase shadow-sm ${merchant.color}`}>
+                              {merchant.icon}
+                            </div>
+                            <div>
+                              <p className="text-[11px] font-black text-slate-900 uppercase tracking-wider">Résumé Web</p>
+                              <p className="text-[9px] font-bold text-slate-400 uppercase">{formatTimeAgo(rev.created_at)} • {merchant.name}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-[11px] font-black text-slate-900 uppercase tracking-wider">{rev.author_name}</p>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase">{formatTimeAgo(rev.created_at)}</p>
+                          <h4 className="font-black text-sm text-slate-900 mb-4 leading-tight line-clamp-2 group-hover:text-blue-600 transition-colors">{rev.products?.name}</h4>
+                          <p className="text-slate-500 text-xs italic mb-6 line-clamp-4 leading-relaxed flex-1">"{rev.review_text}"</p>
+                          <div className="pt-5 border-t border-slate-50 flex items-center justify-between">
+                            <StarRating rating={rev.rating} />
+                            <span className="text-[11px] font-black text-slate-900">{rev.rating}/5</span>
                           </div>
                         </div>
-                        <h4 className="font-black text-sm text-slate-900 mb-4 leading-tight line-clamp-2 group-hover:text-blue-600 transition-colors">{rev.products?.name}</h4>
-                        <p className="text-slate-500 text-xs italic mb-6 line-clamp-4 leading-relaxed flex-1">"{rev.review_text}"</p>
-                        <div className="pt-5 border-t border-slate-50 flex items-center justify-between">
-                          <StarRating rating={rev.rating} />
-                          <span className="text-[11px] font-black text-slate-900">{rev.rating}/5</span>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>

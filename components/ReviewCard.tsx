@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HelpCircle, ChevronDown, Sparkles, ExternalLink, Flame } from 'lucide-react';
+import { HelpCircle, ChevronDown, Sparkles, ExternalLink, Flame, Info, Globe } from 'lucide-react';
 import { Product, ProductSummary, Review } from '../types';
 
 interface ReviewCardProps {
@@ -39,47 +39,44 @@ const getSpecIcon = (key: string) => {
   return 'fa-atom';
 };
 
-const getAvatarColor = (name: string) => {
-  const colors = [
-    'bg-blue-100 text-blue-600', 
-    'bg-emerald-100 text-emerald-600', 
-    'bg-indigo-100 text-indigo-600', 
-    'bg-rose-100 text-rose-600', 
-    'bg-amber-100 text-amber-600'
-  ];
-  const index = (name || "User").length % colors.length;
-  return colors[index];
+const getMerchantLogo = (source: string) => {
+  const s = source.toLowerCase();
+  if (s.includes('fnac')) return { color: 'bg-[#F29100]', icon: 'F', name: 'Fnac' };
+  if (s.includes('darty')) return { color: 'bg-[#E30613]', icon: 'D', name: 'Darty' };
+  if (s.includes('boulanger')) return { color: 'bg-[#F06C00]', icon: 'B', name: 'Boulanger' };
+  if (s.includes('rakuten')) return { color: 'bg-[#BF0000]', icon: 'R', name: 'Rakuten' };
+  if (s.includes('amazon')) return { color: 'bg-[#232F3E]', icon: 'A', name: 'Amazon' };
+  if (s.includes('ia') || s.includes('neural')) return { color: 'bg-blue-600', icon: <Sparkles size={14} />, name: 'Avisscore IA' };
+  return { color: 'bg-slate-400', icon: 'W', name: 'Web' };
 };
 
 const ProductReviewCard: React.FC<{ review: Partial<Review> & { isAI?: boolean } }> = ({ review }) => {
-  const source = review.source || (review.isAI ? "Analyse IA" : "Communauté");
-  const author = review.author_name || (review.isAI ? "Expert Avisscore" : "Acheteur vérifié");
+  const sourceName = review.source || (review.isAI ? "Analyse IA" : "Web");
+  const merchant = getMerchantLogo(sourceName);
   
   const sourceColors: Record<string, string> = {
-    fnac: 'border-amber-500/30 hover:bg-amber-500/5',
-    darty: 'border-red-500/30 hover:bg-red-500/5',
-    boulanger: 'border-orange-500/30 hover:bg-orange-500/5',
-    rakuten: 'border-rose-500/30 hover:bg-rose-500/5',
+    fnac: 'border-[#F29100]/30 hover:bg-[#F29100]/5',
+    darty: 'border-[#E30613]/30 hover:bg-[#E30613]/5',
+    boulanger: 'border-[#F06C00]/30 hover:bg-[#F06C00]/5',
+    rakuten: 'border-[#BF0000]/30 hover:bg-[#BF0000]/5',
     'analyse ia': 'border-blue-500/30 bg-blue-50/30 hover:bg-blue-100/50',
-    'synthèse avisscore': 'border-blue-500/30 bg-blue-50/30 hover:bg-blue-100/50',
   };
 
-  const colorClass = sourceColors[source.toLowerCase()] || 'border-slate-200 hover:bg-slate-50';
+  const colorClass = sourceColors[sourceName.toLowerCase()] || 'border-slate-200 hover:bg-slate-50';
 
   return (
     <div className={`flex flex-col h-full rounded-2xl border p-5 transition-all duration-500 bg-white hover:shadow-xl hover:-translate-y-1 group ${colorClass}`}>
       <div className="flex items-center gap-3 mb-4">
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 shadow-sm ${getAvatarColor(author)}`}>
-          {author.charAt(0).toUpperCase()}
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-white text-sm shrink-0 shadow-sm ${merchant.color}`}>
+          {merchant.icon}
         </div>
         <div className="overflow-hidden">
           <h4 className="font-bold text-slate-800 text-sm truncate leading-tight">
-            {author}
+            Résumé web
           </h4>
           <div className="flex items-center gap-1.5">
-            <i className={`fas ${review.isAI ? 'fa-microchip text-blue-500' : 'fa-check-circle text-emerald-500'} text-[8px]`}></i>
-            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
-              {review.isAI ? 'Certifié Neural' : 'Avis vérifié'} • {source}
+            <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">
+              Source: {merchant.name}
             </p>
           </div>
         </div>
@@ -122,16 +119,15 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
   let topReviews: any[] = [...realReviews];
 
   const merchantReviews = [
-    { source: 'Fnac', text: product.fnac_rev, author: 'Acheteur vérifié' },
-    { source: 'Darty', text: product.darty_rev, author: 'Acheteur vérifié' },
-    { source: 'Boulanger', text: product.boulanger_rev, author: 'Acheteur vérifié' },
-    { source: 'Rakuten', text: product.rakuten_rev, author: 'Acheteur vérifié' }
+    { source: 'Fnac', text: product.fnac_rev },
+    { source: 'Darty', text: product.darty_rev },
+    { source: 'Boulanger', text: product.boulanger_rev },
+    { source: 'Rakuten', text: product.rakuten_rev }
   ].filter(r => r.text && r.text.trim() !== '');
 
   merchantReviews.forEach((m, idx) => {
     topReviews.push({
       id: `merchant-${m.source}-${idx}`,
-      author_name: m.author,
       review_text: m.text,
       rating: 4.5,
       source: m.source,
@@ -144,8 +140,18 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
   if (!product) return null;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-1000">
+    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-1000">
       
+      {/* Disclaimer Banner */}
+      <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-xl flex items-center gap-4 shadow-sm">
+        <div className="bg-amber-100 p-2 rounded-lg text-amber-600">
+          <Info size={18} />
+        </div>
+        <p className="text-amber-800 text-xs md:text-sm font-bold">
+          Informations collectées automatiquement depuis des sources web. Consultez les sites marchands pour les avis officiels.
+        </p>
+      </div>
+
       <div className="bg-white p-8 md:p-12 rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/50 relative overflow-hidden">
         <div className="absolute top-0 right-0 p-12 opacity-[0.02] text-[15rem] text-slate-900 pointer-events-none -rotate-12 translate-x-20 -translate-y-20">
           <i className="fas fa-comments"></i>
@@ -158,16 +164,13 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
               <div className="flex items-center gap-3">
                 <span className={`w-2 h-2 ${topReviews.length > 0 ? 'bg-emerald-500' : 'bg-slate-300'} rounded-full`}></span>
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">
-                  {topReviews.length > 0 ? "Contenu réel identifié" : "En attente d'avis clients"}
+                  {topReviews.length > 0 ? "Sources web identifiées" : "Aucune donnée web"}
                 </span>
               </div>
               {product.external_rating && (
-                <div className="bg-amber-50 border border-amber-200 px-3 py-1 rounded-full flex items-center gap-2 shadow-sm">
-                  <i className="fas fa-globe text-amber-500 text-[10px]"></i>
-                  <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Note Globale du Web: {product.external_rating}/5</span>
-                  {product.external_review_count && (
-                    <span className="text-[9px] font-bold text-amber-400">({product.external_review_count} avis)</span>
-                  )}
+                <div className="bg-slate-50 border border-slate-200 px-3 py-1 rounded-full flex items-center gap-2 shadow-sm">
+                  <Globe size={12} className="text-slate-500" />
+                  <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Note Web: {product.external_rating}/5</span>
                 </div>
               )}
             </div>
@@ -176,7 +179,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
           <div className="flex items-center gap-6 p-5 bg-[#0F172A] rounded-2xl shadow-xl border border-white/5">
             <div className="flex flex-col items-center">
               <StarRating rating={globalScore / 2} size="xs" />
-              <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest mt-1">Score Final</span>
+              <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest mt-1">Score AVISSCORE</span>
             </div>
             <div className="h-10 w-px bg-white/10"></div>
             <div className="flex flex-col">
@@ -193,11 +196,12 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
           </div>
         ) : (
           <div className="py-12 text-center text-slate-400 font-bold uppercase tracking-widest text-xs italic bg-slate-50 rounded-3xl border border-slate-100">
-            Aucun avis disponible pour ce produit.
+            Aucun résumé disponible pour ce produit.
           </div>
         )}
       </div>
 
+      {/* Rest of the component follows similarly but with cleaned up labels */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
         <div className="lg:col-span-8 flex flex-col bg-[#f8f9fa] p-10 rounded-[3rem] border border-slate-200 shadow-2xl relative overflow-hidden group/pros">
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[100px] pointer-events-none"></div>
@@ -293,7 +297,6 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
               </span>
             </div>
 
-            {/* Price section - Only show if price > 0 */}
             {curPrice > 0 && (
               <div className={`w-full p-5 rounded-[2rem] border-2 transition-all duration-500 ${hasPriceError ? 'border-red-500 bg-red-50/30 ring-4 ring-red-500/10' : 'border-slate-100 bg-slate-50/50'}`}>
                 <div className="flex items-center justify-between mb-3">
@@ -352,7 +355,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
               className="inline-flex items-center gap-2 bg-blue-600/20 text-blue-400 px-4 py-2 rounded-full border border-blue-500/20"
             >
               <Sparkles size={14} />
-              <span className="text-[10px] font-black uppercase tracking-[0.3em]">IA Analysis FAQ</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.3em]">Synthèse IA Avisscore</span>
             </motion.div>
             <h2 className="text-4xl md:text-5xl font-black text-white tracking-tighter leading-tight">
               Questions <span className="text-blue-500 italic">Fréquentes</span>
@@ -471,7 +474,7 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary, isAnal
 
             <div className="mt-8 pt-8 border-t border-slate-50 flex items-center justify-between">
               <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                <i className="fas fa-fingerprint text-blue-500"></i> Authentifié par Avisscore
+                <i className="fas fa-fingerprint text-blue-500"></i> Données analysées par Avisscore
               </div>
             </div>
           </div>
