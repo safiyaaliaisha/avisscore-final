@@ -490,7 +490,7 @@ export default function App() {
               <div className="max-w-7xl mx-auto px-6">
                 <div className="mb-16 text-center md:text-left">
                   <h2 className="text-5xl font-black text-[#111] tracking-tighter mb-4">Avis Récents</h2>
-                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">BASÉ SUR LES DERNIERS RETOURS MARCHANDS</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">BASÉ SUR LES DERNIERS RÉSUMÉS WEB</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                   {isHomeLoading && communityReviews.length === 0 ? (
@@ -498,6 +498,7 @@ export default function App() {
                   ) : (
                     communityReviews.map((rev) => {
                       const merchant = getMerchantLogo(rev.source || 'Web');
+                      const cleanText = (rev.review_text || "").replace(/[""«»]/g, '').trim();
                       return (
                         <div 
                           key={rev.id} 
@@ -510,11 +511,11 @@ export default function App() {
                             </div>
                             <div>
                               <p className="text-[11px] font-black text-slate-900 uppercase tracking-wider">Résumé Web</p>
-                              <p className="text-[9px] font-bold text-slate-400 uppercase">{formatTimeAgo(rev.created_at)} • {merchant.name}</p>
+                              <p className="text-[9px] font-bold text-slate-400 uppercase">{formatTimeAgo(rev.created_at)} • Source: {merchant.name}</p>
                             </div>
                           </div>
                           <h4 className="font-black text-sm text-slate-900 mb-4 leading-tight line-clamp-2 group-hover:text-blue-600 transition-colors">{rev.products?.name}</h4>
-                          <p className="text-slate-500 text-xs italic mb-6 line-clamp-4 leading-relaxed flex-1">"{rev.review_text}"</p>
+                          <p className="text-slate-500 text-xs italic mb-6 line-clamp-4 leading-relaxed flex-1">{cleanText}</p>
                           <div className="pt-5 border-t border-slate-50 flex items-center justify-between">
                             <StarRating rating={rev.rating} />
                             <span className="text-[11px] font-black text-slate-900">{rev.rating}/5</span>
