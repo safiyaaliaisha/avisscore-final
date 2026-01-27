@@ -132,24 +132,26 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, onBac
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {alternatives.length > 0 ? alternatives.map((alt, i) => (
-                <div key={i} className="group relative overflow-hidden bg-white border border-slate-100 p-5 rounded-[2rem] shadow-sm hover:shadow-xl hover:border-blue-500/20 transition-all duration-500 cursor-pointer">
+                <div key={i} className="group relative overflow-hidden bg-white border border-slate-100 p-5 rounded-[2rem] shadow-sm hover:shadow-xl hover:border-blue-500/20 transition-all duration-500 cursor-pointer h-full">
                   {/* Decorative background element */}
                   <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-full -translate-y-12 translate-x-12 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
                   
-                  <div className="relative z-10 flex flex-col gap-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform duration-500">
+                  <div className="relative z-10 flex flex-col gap-4 h-full">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform duration-500 shrink-0">
                           <Zap size={18} />
                         </div>
                         <div className="flex flex-col">
                           <span className="text-[8px] font-black text-blue-600 uppercase tracking-widest mb-0.5">Top Alternative</span>
-                          <span className="font-black text-slate-900 text-sm leading-tight group-hover:text-blue-600 transition-colors line-clamp-1">{alt}</span>
+                          <span className="font-black text-slate-900 text-[13px] leading-snug group-hover:text-blue-600 transition-colors">
+                            {alt}
+                          </span>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                    <div className="mt-auto pt-2 border-t border-slate-50 flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <Star size={10} className="fill-amber-400 text-amber-400" />
                         <span className="text-[10px] font-bold text-slate-400">Choix Premium</span>
