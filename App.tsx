@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
@@ -51,6 +52,7 @@ export default function App() {
   
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(4);
+  const [visibleDealsCount, setVisibleDealsCount] = useState(4);
   const [showAllActive, setShowAllActive] = useState(false);
   
   const heroSearchRef = useRef<HTMLDivElement>(null);
@@ -61,7 +63,7 @@ export default function App() {
       const [prods, revs, deals] = await Promise.all([
         fetchHomeProducts(100),
         fetchLatestCommunityReviews(4),
-        fetchDeals(8)
+        fetchDeals(40)
       ]);
       setPopularProducts(Array.isArray(prods) ? prods : []);
       setCommunityReviews(Array.isArray(revs) ? revs : []);
@@ -92,8 +94,16 @@ export default function App() {
     return filteredProducts.slice(0, showAllActive ? visibleCount : 4);
   }, [filteredProducts, visibleCount, showAllActive]);
 
+  const displayedDeals = useMemo(() => {
+    return liveDeals.slice(0, visibleDealsCount);
+  }, [liveDeals, visibleDealsCount]);
+
   const handleLoadMore = () => {
     setVisibleCount(prev => prev + 8);
+  };
+
+  const handleLoadMoreDeals = () => {
+    setVisibleDealsCount(prev => prev + 8);
   };
 
   useEffect(() => {
@@ -136,7 +146,7 @@ export default function App() {
       if (data) {
         setSelectedProduct(data);
         if (data.reviews && data.reviews.length > 0) {
-          const summary = await getAIReviewSummary(data.name, data.reviews);
+          const summary = await getAIReviewSummary(data);
           if (summary) setAiSummary(summary);
         }
       } else {
@@ -154,6 +164,7 @@ export default function App() {
     if (newView === 'home') {
       setSelectedCategory(null);
       setVisibleCount(4);
+      setVisibleDealsCount(4);
       setShowAllActive(false);
       setQuery('');
       setSearchResults([]);
@@ -240,6 +251,12 @@ export default function App() {
     }
   };
 
+  // Helper pour obtenir la première image d'un champ jsonb
+  const getFirstImage = (img: string | string[]) => {
+    if (Array.isArray(img)) return img[0];
+    return img;
+  };
+
   return (
     <div className="min-h-screen bg-[#f8f9fa] flex flex-col font-sans text-slate-900">
       <Helmet>
@@ -291,7 +308,7 @@ export default function App() {
                           className={`flex items-center gap-5 p-4 cursor-pointer transition-all ${idx === selectedIndex ? 'bg-blue-50 border-l-4 border-blue-600 pl-6' : 'hover:bg-slate-50'}`}
                         >
                           <div className="w-12 h-12 bg-white rounded-xl p-1 flex items-center justify-center border border-slate-100 shrink-0">
-                            <img src={p.image_url} alt={p.name} className="max-w-full max-h-full object-contain" />
+                            <img src={getFirstImage(p.image_url)} alt={p.name} className="max-w-full max-h-full object-contain" />
                           </div>
                           <div className="flex-1">
                             <h4 className="font-black text-slate-900 text-sm leading-tight">{p.name}</h4>
@@ -346,6 +363,7 @@ export default function App() {
                     const refPrice = Number(p.reference_price) || 0;
                     const discount = (curPrice > 0 && refPrice > 0) ? Math.round(((refPrice - curPrice) / refPrice) * 100) : 0;
                     const hasPriceError = discount >= 50 && curPrice > 0;
+                    const hasNoPrice = !p.current_price || p.current_price === 0;
                     
                     return (
                       <div 
@@ -365,7 +383,7 @@ export default function App() {
                         >
                           <div className="h-44 w-full flex items-center justify-center mb-8 overflow-hidden bg-slate-50 rounded-2xl">
                             {p.image_url ? (
-                              <img src={p.image_url} alt={p.name} className="max-h-[80%] max-w-[80%] object-contain group-hover/link:scale-110 transition-transform duration-500 drop-shadow-md" />
+                              <img src={getFirstImage(p.image_url)} alt={p.name} className="max-h-[80%] max-w-[80%] object-contain group-hover/link:scale-110 transition-transform duration-500 drop-shadow-md" />
                             ) : (
                               <i className="fas fa-image text-slate-200 text-4xl"></i>
                             )}
@@ -373,8 +391,21 @@ export default function App() {
                           <h3 className="font-black text-sm text-slate-900 text-center group-hover/link:text-blue-600 mb-3 transition-colors line-clamp-2 px-2 h-10">{p.name}</h3>
                         </div>
                         
-                        <div className="mt-auto w-full flex flex-col items-center gap-4">
-                          {hasPriceError ? (
+                        <div className="mt-auto w-full flex flex-col items-center gap-4 text-center">
+                          {hasNoPrice ? (
+                            <div className="w-full flex flex-col items-center gap-3">
+                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                 Prix en attente d'actualisation
+                               </p>
+                               <StarRating rating={p.score ? p.score / 2 : (p.rating || 4)} />
+                               <button 
+                                onClick={() => navigateTo(`${p.category}/${p.product_slug}`)}
+                                className="w-full bg-blue-600 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg hover:bg-blue-500"
+                               >
+                                VOIR L'ANALYSE
+                               </button>
+                            </div>
+                          ) : hasPriceError ? (
                             <div className="flex flex-col items-center gap-1 w-full">
                               <div className="flex items-center gap-2">
                                 <span className="text-red-600 font-black text-xl">{curPrice.toFixed(2)}€</span>
@@ -393,11 +424,14 @@ export default function App() {
                                   VOIR L'OFFRE ⚡
                                 </a>
                               ) : (
-                                <button className="w-full bg-slate-100 text-slate-400 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest cursor-not-allowed">STOCK ÉPUISÉ</button>
+                                <button className="w-full bg-slate-100 text-slate-400 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest cursor-not-allowed">BIENTÔT DISPONIBLE</button>
                               )}
                             </div>
                           ) : (
                             <div className="w-full flex flex-col items-center gap-4">
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-900 font-black text-xl">{curPrice.toFixed(2)}€</span>
+                              </div>
                               <StarRating rating={p.score ? p.score / 2 : (p.rating || 4)} />
                               <button 
                                 onClick={() => navigateTo(`${p.category}/${p.product_slug}`)}
@@ -452,8 +486,8 @@ export default function App() {
                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                   {isHomeLoading && liveDeals.length === 0 ? (
                     [...Array(4)].map((_, i) => <div key={i} className="bg-white rounded-[2rem] p-8 h-80 animate-pulse border border-slate-100 shadow-sm"></div>)
-                  ) : liveDeals.map((deal) => (
-                    <div key={deal.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col items-center group relative overflow-hidden">
+                  ) : displayedDeals.map((deal) => (
+                    <div key={deal.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col items-center group relative overflow-hidden animate-in fade-in">
                        <div className={`absolute top-4 left-4 z-20 px-4 py-1.5 rounded-full font-black text-[10px] uppercase tracking-widest shadow-lg flex items-center gap-1.5 ${getDiscountBadgeColor(deal.discount)}`}>
                          <i className="fas fa-tag"></i>
                          -{deal.discount}%
@@ -484,6 +518,18 @@ export default function App() {
                     </div>
                   ))}
                </div>
+
+               {visibleDealsCount < liveDeals.length && (
+                <div className="flex justify-center mt-12">
+                  <button 
+                    onClick={handleLoadMoreDeals}
+                    className="bg-white border-2 border-slate-200 text-slate-900 font-black px-12 py-4 rounded-2xl text-[10px] uppercase tracking-[0.3em] hover:border-rose-600 hover:text-rose-600 transition-all shadow-xl active:scale-95 flex items-center gap-4"
+                  >
+                    CHARGER PLUS DE DEALS
+                    <i className="fas fa-plus"></i>
+                  </button>
+                </div>
+              )}
             </section>
 
             <section className="bg-slate-100/30 pt-20 pb-32 border-y border-slate-200">

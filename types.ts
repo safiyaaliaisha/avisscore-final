@@ -43,7 +43,7 @@ export interface Product {
   id: string;
   name: string;
   description: string;
-  image_url: string;
+  image_url: string | string[];
   price?: number;
   current_price?: number;
   reference_price?: number;
@@ -51,7 +51,6 @@ export interface Product {
   category?: string;
   product_slug?: string;
   created_at?: string;
-  // Integrated fields
   rating?: number;
   review_text?: string;
   points_forts?: string[];
@@ -62,29 +61,35 @@ export interface Product {
   score?: number;
   reviews?: Review[];
   analysis?: Analysis;
-  faq?: FAQItem[] | string | null; // Make it explicitly nullable
-  // Merchants
+  faq?: FAQItem[] | string | null;
+  // Merchants Reviews
   fnac_rev?: string;
   darty_rev?: string;
   boulanger_rev?: string;
   rakuten_rev?: string;
-  // SEO Metadata
+  amazon_rev?: string;
+  // Merchants Prices
+  fnac_price?: number;
+  darty_price?: number;
+  amazon_price?: number;
+  boulanger_price?: number;
+  // SEO & External
   seo_title?: string;
   seo_description?: string;
-  // External data
   external_rating?: number;
   external_review_count?: number;
 }
 
 export interface ProductSummary {
-  rating: number;
+  rating: number; 
   sentiment: string;
   review_text: string[];
   cycle_de_vie: string[];
   points_forts: string[];
   points_faibles: string[];
   fiche_technique: string[];
-  alternative: string;
+  alternatives: string[]; 
+  design_analysis: string; 
   image_url: string;
   seo_title: string;
   seo_description: string;
