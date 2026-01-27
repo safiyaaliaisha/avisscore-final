@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { ArrowLeft, ShoppingCart, Info, Sparkles, CheckCircle, XCircle, Layout, HelpCircle, ChevronRight, Star } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Info, Sparkles, CheckCircle, Layout, HelpCircle, ChevronRight, Star, Zap, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Product, ProductSummary } from '../types';
 import { ReviewCard } from '../components/ReviewCard';
@@ -44,6 +44,11 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, onBac
     if (prices.length === 0) return null;
     return prices.reduce((prev, curr) => (prev.val! < curr.val! ? prev : curr));
   }, [product]);
+
+  const alternatives = useMemo(() => {
+    const list = summary?.alternatives || (product.alternative ? [product.alternative] : []);
+    return list.filter(Boolean);
+  }, [summary, product]);
 
   const faqs = useMemo(() => {
     const rawData = product.faq;
@@ -118,9 +123,51 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, onBac
             </div>
           </div>
 
-          <p className="text-slate-500 text-lg leading-relaxed font-medium italic">
-            {product.seo_description || "Analyse neurale basée sur les retours d'experts et les données techniques du constructeur."}
-          </p>
+          {/* Enhanced Alternatives Cards Section */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2">
+                <Sparkles size={12} className="text-blue-500" /> Alternatives recommandées
+              </h3>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {alternatives.length > 0 ? alternatives.map((alt, i) => (
+                <div key={i} className="group relative overflow-hidden bg-white border border-slate-100 p-5 rounded-[2rem] shadow-sm hover:shadow-xl hover:border-blue-500/20 transition-all duration-500 cursor-pointer">
+                  {/* Decorative background element */}
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-full -translate-y-12 translate-x-12 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+                  
+                  <div className="relative z-10 flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform duration-500">
+                          <Zap size={18} />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[8px] font-black text-blue-600 uppercase tracking-widest mb-0.5">Top Alternative</span>
+                          <span className="font-black text-slate-900 text-sm leading-tight group-hover:text-blue-600 transition-colors line-clamp-1">{alt}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                      <div className="flex items-center gap-1.5">
+                        <Star size={10} className="fill-amber-400 text-amber-400" />
+                        <span className="text-[10px] font-bold text-slate-400">Choix Premium</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[9px] font-black text-slate-300 group-hover:text-blue-600 transition-colors uppercase tracking-widest">
+                        Détails <ArrowRight size={10} className="group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )) : (
+                <div className="col-span-2 py-8 bg-slate-50 rounded-[2rem] border border-dashed border-slate-200 flex flex-col items-center justify-center gap-3">
+                  <div className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-blue-500 animate-spin"></div>
+                  <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Recherche d'alternatives...</p>
+                </div>
+              )}
+            </div>
+          </div>
 
           <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-100 space-y-6">
             <div className="flex justify-between items-end">
@@ -202,20 +249,22 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, onBac
                 <h3 className="text-2xl font-black text-slate-900 tracking-tighter">Fiche Technique</h3>
                 <div className="space-y-4">
                   {(product.fiche_technique || summary?.fiche_technique || []).map((spec, i) => {
-                    const [k, v] = spec.split(':');
+                    const parts = spec.split(':');
+                    const k = parts[0];
+                    const v = parts.slice(1).join(':');
                     return (
                       <div key={i} className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl border border-slate-100">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{k}</span>
-                        <span className="text-sm font-black text-slate-900">{v}</span>
+                        <span className="text-sm font-black text-slate-900">{v || "N/A"}</span>
                       </div>
                     );
                   })}
                 </div>
               </div>
               <div className="space-y-8">
-                <h3 className="text-2xl font-black text-slate-900 tracking-tighter">Alternatives</h3>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tighter">Comparaison Directe</h3>
                 <div className="space-y-4">
-                  {(summary?.alternatives || [product.alternative]).filter(Boolean).map((alt, i) => (
+                  {alternatives.map((alt, i) => (
                     <div key={i} className="flex items-center justify-between p-6 bg-blue-50/50 rounded-[2rem] border border-blue-100 group cursor-pointer hover:bg-blue-50 transition-colors">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm"><Sparkles className="text-blue-600" size={20} /></div>
