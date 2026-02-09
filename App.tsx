@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Sparkles, Quote } from 'lucide-react';
+import { Sparkles, Quote, ChevronDown } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
 import { fetchFullProductData, fetchHomeProducts, fetchLatestCommunityReviews } from './services/productService';
 import { getAIReviewSummary } from './services/geminiService';
@@ -39,7 +39,7 @@ export default function App() {
   const [isHomeLoading, setIsHomeLoading] = useState(true);
   
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [showAllActive, setShowAllActive] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(8);
   
   const heroSearchRef = useRef<HTMLDivElement>(null);
 
@@ -75,8 +75,8 @@ export default function App() {
   }, [popularProducts, selectedCategory]);
 
   const displayedProducts = useMemo(() => {
-    return filteredProducts.slice(0, showAllActive ? 100 : 4);
-  }, [filteredProducts, showAllActive]);
+    return filteredProducts.slice(0, visibleCount);
+  }, [filteredProducts, visibleCount]);
 
   useEffect(() => {
     const performSearch = async () => {
@@ -234,7 +234,7 @@ export default function App() {
               </div>
             </div>
 
-            <section className="max-w-7xl mx-auto px-6 pt-20 pb-12">
+            <section className="max-w-7xl mx-auto px-6 pt-20 pb-20">
               <div className="flex items-center justify-between mb-12">
                 <h2 className="text-4xl font-black text-[#111] tracking-tighter">Produits Populaires</h2>
               </div>
@@ -253,6 +253,18 @@ export default function App() {
                   </div>
                 ))}
               </div>
+              
+              {filteredProducts.length > visibleCount && (
+                <div className="mt-16 flex justify-center">
+                  <button 
+                    onClick={() => setVisibleCount(prev => prev + 12)}
+                    className="group bg-white border border-slate-200 text-slate-900 px-10 py-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.3em] flex items-center gap-4 hover:border-blue-600 hover:text-blue-600 transition-all shadow-sm hover:shadow-xl active:scale-95"
+                  >
+                    Charger plus de produits
+                    <ChevronDown size={16} className="group-hover:translate-y-1 transition-transform" />
+                  </button>
+                </div>
+              )}
             </section>
             
             <section className="bg-slate-100/30 pt-20 pb-32 border-y border-slate-200">
