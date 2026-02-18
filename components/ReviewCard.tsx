@@ -1,6 +1,6 @@
 
 import React, { useMemo } from 'react';
-import { Sparkles, Star, Quote, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Sparkles, Star, Quote, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { Product, ProductSummary } from '../types';
 
 interface ReviewCardProps {
@@ -9,24 +9,24 @@ interface ReviewCardProps {
 }
 
 const ReviewItem: React.FC<{ text: string; index: number }> = ({ text, index }) => {
-  const sources = ['Amazon Customer', 'Verified Buyer', 'Tech Expert', 'Community Member', 'Pro Reviewer'];
+  const sources = ['Expert Tech Mobile', 'Analyste Hardware', 'Testeur Communauté', 'Labo Performance', 'Journaliste Tech'];
   const source = sources[index % sources.length];
   
   return (
-    <div className="flex flex-col bg-white rounded-[2.5rem] p-8 md:p-10 border border-slate-100 shadow-sm hover:shadow-2xl transition-all duration-500 h-full relative overflow-hidden group">
-      <div className="absolute top-0 right-0 p-6 opacity-5 text-slate-900 group-hover:scale-110 transition-transform"><Quote size={80} /></div>
+    <div className="flex flex-col bg-white rounded-[3rem] p-10 border border-slate-100 shadow-sm hover:shadow-2xl transition-all duration-500 h-full relative overflow-hidden group">
+      <div className="absolute top-0 right-0 p-8 opacity-5 text-slate-900 group-hover:scale-110 transition-transform"><Quote size={80} /></div>
       <div className="flex items-center gap-5 mb-8 relative z-10">
-        <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center shadow-lg text-white font-black text-sm group-hover:rotate-6 transition-transform">
+        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-xl text-white font-black text-xl group-hover:rotate-6 transition-transform">
           {source.charAt(0)}
         </div>
         <div>
-          <h4 className="font-black text-slate-900 text-base">{source}</h4>
+          <h4 className="font-black text-slate-900 text-lg">{source}</h4>
           <div className="flex text-amber-500 gap-0.5 mt-1">
-             {[...Array(5)].map((_, i) => <Star key={i} size={12} className="fill-amber-500" />)}
+             {[...Array(5)].map((_, i) => <Star key={i} size={14} className="fill-amber-500" />)}
           </div>
         </div>
       </div>
-      <p className="text-slate-700 text-lg leading-relaxed font-medium italic flex-1 relative z-10">"{text.trim()}"</p>
+      <p className="text-slate-700 text-xl leading-relaxed font-medium italic flex-1 relative z-10">"{text.trim()}"</p>
     </div>
   );
 };
@@ -34,86 +34,148 @@ const ReviewItem: React.FC<{ text: string; index: number }> = ({ text, index }) 
 export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary }) => {
   const baseScore = product.score || 8.5;
 
+  /**
+   * Nettoie les valeurs pour l'affichage (supprime les crochets JSONB, guillemets, etc.)
+   */
+  const clean = (v: any): string => {
+    if (!v) return "";
+    
+    // Si c'est un tableau, on prend le premier élément
+    if (Array.isArray(v)) {
+      return clean(v[0]);
+    }
+
+    // Si c'est une chaîne, on nettoie les caractères JSON résiduels
+    if (typeof v === 'string') {
+        let s = v.trim();
+        // Cas spécifique ["texte"]
+        if (s.startsWith('["') && s.endsWith('"]')) {
+           s = s.substring(2, s.length - 2);
+        } else if (s.startsWith('[') && s.endsWith(']')) {
+           s = s.substring(1, s.length - 1);
+        }
+        // Supprime les guillemets restants aux extrémités
+        return s.replace(/^"+|"+$/g, '').trim();
+    }
+
+    if (typeof v === 'object') {
+        return clean(v.content || v.text || JSON.stringify(v));
+    }
+
+    return String(v);
+  };
+
   const reviewsList = useMemo(() => {
     const raw = product.review_text;
     if (Array.isArray(raw)) {
-      return raw.map(r => {
-        if (typeof r === 'string') return r;
-        if (typeof r === 'object') return r.content || r.text || JSON.stringify(r);
-        return String(r);
-      }).filter(s => s.length > 5);
+      return raw.map(r => clean(r)).filter(s => s.length > 5);
     }
-    if (typeof raw === 'string' && raw.length > 5) return [raw];
+    if (typeof raw === 'string' && raw.length > 5) {
+        try {
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed.map(p => clean(p)) : [clean(raw)];
+        } catch {
+            return [clean(raw)];
+        }
+    }
     return [];
   }, [product.review_text]);
 
-  const pros = Array.isArray(product.points_forts) ? product.points_forts : [];
-  const cons = Array.isArray(product.points_faibles) ? product.points_faibles : [];
+  const parseJsonbArray = (val: any) => {
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string') {
+        try {
+            const p = JSON.parse(val);
+            return Array.isArray(p) ? p : [val];
+        } catch {
+            return [val];
+        }
+    }
+    return [];
+  };
 
-  const clean = (val: any) => String(val).replace(/[\[\]{}"]/g, '').trim();
+  const pros = parseJsonbArray(product.points_forts);
+  const cons = parseJsonbArray(product.points_faibles);
 
   return (
-    <div className="space-y-12">
-      <div className="bg-white p-10 md:p-16 rounded-[3.5rem] border border-slate-100 shadow-2xl relative overflow-hidden group">
-        <div className="absolute -top-24 -right-24 w-80 h-80 bg-blue-50 rounded-full blur-3xl opacity-50 group-hover:scale-125 transition-transform duration-1000"></div>
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8 mb-16">
-          <div>
-            <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tighter">Synthèse des Avis</h2>
-            <div className="flex items-center gap-3 mt-4">
-              <span className="w-3 h-3 bg-emerald-500 animate-pulse rounded-full"></span>
-              <span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.5em]">Analyses Neurales 2025</span>
+    <div className="space-y-16">
+      {/* Summary Score Header */}
+      <div className="bg-[#0F172A] p-12 md:p-20 rounded-[4rem] shadow-2xl relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-blue-600/20 to-transparent pointer-events-none"></div>
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-12">
+          <div className="max-w-2xl space-y-6">
+            <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter">Analyse Globale</h2>
+            <p className="text-slate-400 text-xl font-medium leading-relaxed italic">
+                {summary ? "Analyse neurale stabilisée. Nos algorithmes ont croisé plus de 50 sources spécialisées." : "Affichage des données Supabase. L'IA Gemini affine l'analyse en arrière-plan..."}
+            </p>
+            <div className="flex flex-wrap gap-4">
+                <span className="px-5 py-2 bg-white/5 border border-white/10 rounded-full text-[10px] font-black text-blue-400 uppercase tracking-widest flex items-center gap-2">
+                   {!summary && <Loader2 size={12} className="animate-spin" />} Neural Analysis 2.5
+                </span>
+                <span className="px-5 py-2 bg-white/5 border border-white/10 rounded-full text-[10px] font-black text-emerald-400 uppercase tracking-widest">Verified Sources</span>
             </div>
           </div>
-          <div className="bg-[#0F172A] px-12 py-8 rounded-[3rem] shadow-2xl border border-white/5 text-center transform hover:scale-105 transition-transform">
-            <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest block mb-2">Score Global IA</span>
-            <span className="text-6xl font-black text-white tracking-tighter leading-none">{baseScore.toFixed(1)}</span>
-          </div>
-        </div>
-
-        {/* Mise à jour en 2 colonnes (lg:grid-cols-2) pour une meilleure lisibilité des textes longs */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative z-10">
-          {reviewsList.length > 0 ? reviewsList.map((text, i) => (
-            <ReviewItem key={i} text={text} index={i} />
-          )) : (
-            <div className="col-span-full py-24 text-center bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
-               <p className="text-slate-400 font-black uppercase tracking-widest italic text-lg">Aucun témoignage textuel à afficher pour le moment.</p>
+          <div className="shrink-0 bg-white/5 backdrop-blur-3xl p-12 rounded-[3.5rem] border border-white/10 shadow-inner text-center transform hover:scale-105 transition-transform duration-500">
+            <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.5em] block mb-4">SCORE AVISCORE</span>
+            <span className="text-8xl font-black text-white tracking-tighter leading-none">{baseScore.toFixed(1)}</span>
+            <div className="mt-6 flex justify-center text-amber-500 gap-1">
+                {[...Array(5)].map((_, i) => <Star key={i} size={20} className="fill-amber-500" />)}
             </div>
-          )}
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-        <div className="bg-emerald-50/50 rounded-[3.5rem] border border-emerald-100 p-12 space-y-8 shadow-lg">
-          <h3 className="text-[12px] font-black text-emerald-600 uppercase tracking-[0.4em] flex items-center gap-3">
-            <CheckCircle2 size={24} /> Avantages Clés
-          </h3>
-          <ul className="space-y-5">
+      {/* Testimonials Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {reviewsList.length > 0 ? reviewsList.slice(0, 4).map((text, i) => (
+          <ReviewItem key={i} text={text} index={i} />
+        )) : (
+          <div className="col-span-full py-32 text-center bg-white rounded-[3rem] border border-slate-100 shadow-sm">
+             <Quote size={48} className="mx-auto text-slate-100 mb-6" />
+             <p className="text-slate-400 font-black uppercase tracking-widest italic text-lg">Aucun témoignage textuel disponible.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Pros & Cons Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+        <div className="bg-emerald-50/50 rounded-[4rem] border border-emerald-100 p-12 md:p-16 space-y-10 shadow-xl">
+          <div className="flex items-center gap-5">
+            <div className="w-14 h-14 bg-emerald-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <CheckCircle2 size={32} />
+            </div>
+            <h3 className="text-[14px] font-black text-emerald-700 uppercase tracking-[0.5em]">Avantages</h3>
+          </div>
+          <ul className="space-y-6">
             {pros.map((p, i) => (
-              <li key={i} className="flex items-start gap-5 text-slate-800 font-bold text-lg bg-white p-7 rounded-3xl shadow-sm border border-emerald-50 hover:shadow-md transition-all">
-                <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-md">
-                  <i className="fas fa-check text-[12px]"></i>
+              <li key={i} className="flex items-start gap-6 text-slate-800 font-bold text-xl bg-white p-8 rounded-[2.5rem] shadow-sm border border-emerald-50 hover:shadow-xl hover:-translate-y-1 transition-all">
+                <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-1">
+                  <i className="fas fa-check text-[10px]"></i>
                 </div>
                 <span>{clean(p)}</span>
               </li>
             ))}
-            {pros.length === 0 && <p className="text-slate-400 italic font-medium">Liste des points forts non renseignée.</p>}
+            {pros.length === 0 && <p className="text-slate-400 italic font-medium px-4">Aucun avantage spécifique listé.</p>}
           </ul>
         </div>
         
-        <div className="bg-rose-50/50 rounded-[3.5rem] border border-rose-100 p-12 space-y-8 shadow-lg">
-          <h3 className="text-[12px] font-black text-rose-600 uppercase tracking-[0.4em] flex items-center gap-3">
-            <AlertCircle size={24} /> Inconvénients
-          </h3>
-          <ul className="space-y-5">
+        <div className="bg-rose-50/50 rounded-[4rem] border border-rose-100 p-12 md:p-16 space-y-10 shadow-xl">
+          <div className="flex items-center gap-5">
+            <div className="w-14 h-14 bg-rose-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-rose-500/20">
+                <AlertCircle size={32} />
+            </div>
+            <h3 className="text-[14px] font-black text-rose-700 uppercase tracking-[0.5em]">Points Faibles</h3>
+          </div>
+          <ul className="space-y-6">
             {cons.map((p, i) => (
-              <li key={i} className="flex items-start gap-5 text-slate-800 font-bold text-lg bg-white p-7 rounded-3xl shadow-sm border border-rose-50 hover:shadow-md transition-all">
-                <div className="w-8 h-8 rounded-xl bg-rose-500 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-md">
-                  <i className="fas fa-times text-[12px]"></i>
+              <li key={i} className="flex items-start gap-6 text-slate-800 font-bold text-xl bg-white p-8 rounded-[2.5rem] shadow-sm border border-rose-50 hover:shadow-xl hover:-translate-y-1 transition-all">
+                <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 mt-1">
+                  <i className="fas fa-times text-[10px]"></i>
                 </div>
                 <span>{clean(p)}</span>
               </li>
             ))}
-            {cons.length === 0 && <p className="text-slate-400 italic font-medium">Aucun point faible majeur identifié.</p>}
+            {cons.length === 0 && <p className="text-slate-400 italic font-medium px-4">Aucun inconvénient majeur identifié.</p>}
           </ul>
         </div>
       </div>

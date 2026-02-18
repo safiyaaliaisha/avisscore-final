@@ -39,21 +39,15 @@ export interface Product {
   product_slug?: string;
   created_at?: string;
   rating?: number;
-  // review_text est maintenant un JSONB contenant une liste de chaînes (témoignages)
-  review_text?: string[] | any; 
-  reviews_txt?: string; // Ancien champ, conservé pour compatibilité si besoin
-  points_forts?: string[];
-  points_faibles?: string[];
-  fiche_technique?: string[] | any;
-  faq?: FAQItem[] | any;
-  verdict_technique?: string; 
+  // review_text est un JSONB contenant une liste de chaînes (témoignages)
+  review_text?: any; 
+  points_forts?: any;
+  points_faibles?: any;
+  fiche_technique?: any;
+  faq?: any;
+  verdict_technique?: any; 
   alternative?: string; 
   score?: number;
-  reviews?: Review[];
-  fnac_price?: number;
-  darty_price?: number;
-  amazon_price?: number;
-  boulanger_price?: number;
   seo_title?: string;
   seo_description?: string;
 }

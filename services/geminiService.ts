@@ -3,7 +3,19 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { ProductSummary, Product } from "../types";
 
 export const getAIReviewSummary = async (product: Product): Promise<ProductSummary | null> => {
-  const reviewsContext = product.reviews_txt || (product.reviews || []).map(r => r.review_text).join('\n');
+  // Fix: product type defines 'review_text' (any) as the source of reviews; 'reviews_txt' and 'reviews' do not exist.
+  const raw = product.review_text;
+  let reviewsContext = "";
+  if (Array.isArray(raw)) {
+    reviewsContext = raw.map(r => {
+      if (typeof r === 'string') return r;
+      if (typeof r === 'object' && r !== null) return r.content || r.text || JSON.stringify(r);
+      return String(r);
+    }).join('\n');
+  } else if (typeof raw === 'string') {
+    reviewsContext = raw;
+  }
+  
   if (!reviewsContext || reviewsContext.length < 10) return null;
 
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });

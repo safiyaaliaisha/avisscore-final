@@ -107,19 +107,24 @@ export default function App() {
     try {
       const { data, error } = await fetchFullProductData(target, type, category);
       if (data) {
+        // Affichage immédiat des données Supabase
         setSelectedProduct(data);
-        if (data.review_text || data.reviews_txt || (data.reviews && data.reviews.length > 0)) {
-          const summary = await getAIReviewSummary(data);
-          if (summary) setAiSummary(summary);
+        setIsLoading(false); // On débloque l'UI ici pour la rapidité
+
+        // Chargement asynchrone de l'IA sans bloquer l'utilisateur
+        if (data.review_text) {
+          getAIReviewSummary(data).then(summary => {
+            if (summary) setAiSummary(summary);
+          });
         }
       } else {
         console.warn(`Product not found for: ${target}`);
         setView('not-found');
+        setIsLoading(false);
       }
     } catch (e) {
       console.error("Selection error:", e);
       setView('not-found');
-    } finally {
       setIsLoading(false);
     }
   }, []);
@@ -303,7 +308,7 @@ export default function App() {
             {isLoading ? (
                <div className="flex flex-col items-center justify-center py-40 animate-in fade-in">
                   <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-8"></div>
-                  <p className="font-black text-slate-900 uppercase tracking-widest text-sm">Analyse Neurale en cours...</p>
+                  <p className="font-black text-slate-900 uppercase tracking-widest text-sm">Chargement Supabase...</p>
                </div>
             ) : selectedProduct ? (
               <ProductDetails product={selectedProduct} summary={aiSummary} popularProducts={popularProducts} onBack={() => navigateTo('home')} />
