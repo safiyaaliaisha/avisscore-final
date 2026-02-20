@@ -8,31 +8,38 @@ interface ReviewCardProps {
   summary?: ProductSummary | null;
 }
 
-const ReviewItem: React.FC<{ text: string; index: number }> = ({ text, index }) => {
+const ReviewItem: React.FC<{ text: string; index: number; rating?: number }> = ({ text, index, rating = 5 }) => {
   const sources = ['Expert Tech Mobile', 'Analyste Hardware', 'Testeur Communauté', 'Labo Performance', 'Journaliste Tech'];
   const source = sources[index % sources.length];
   
   return (
-    <div className="flex flex-col bg-white rounded-[3rem] p-10 border border-slate-100 shadow-sm hover:shadow-2xl transition-all duration-500 h-full relative overflow-hidden group">
-      <div className="absolute top-0 right-0 p-8 opacity-5 text-slate-900 group-hover:scale-110 transition-transform"><Quote size={80} /></div>
-      <div className="flex items-center gap-5 mb-8 relative z-10">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-xl text-white font-black text-xl group-hover:rotate-6 transition-transform">
-          {source.charAt(0)}
+    <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-200 hover:shadow-xl transition-all h-full flex flex-col relative overflow-hidden group">
+      <div className="absolute top-0 right-0 p-4 opacity-5"><Quote size={80} /></div>
+      <div className="flex items-center gap-4 mb-8 relative z-10">
+        <div className="w-12 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black shadow-lg">
+          <Sparkles size={18} />
         </div>
         <div>
-          <h4 className="font-black text-slate-900 text-lg">{source}</h4>
-          <div className="flex text-amber-500 gap-0.5 mt-1">
-             {[...Array(5)].map((_, i) => <Star key={i} size={14} className="fill-amber-500" />)}
-          </div>
+          <p className="text-[11px] font-black text-slate-900 uppercase">{source}</p>
+          <p className="text-[9px] font-bold text-slate-400 uppercase">RÉCEMMENT</p>
         </div>
       </div>
-      <p className="text-slate-700 text-xl leading-relaxed font-medium italic flex-1 relative z-10">"{text.trim()}"</p>
+      <p className="text-slate-500 text-xs italic mb-6 line-clamp-6 leading-relaxed flex-1 relative z-10">"{text.trim()}"</p>
+      <div className="pt-6 border-t border-slate-50 flex items-center justify-between">
+        <div className="flex text-amber-500 gap-0.5">
+          {[...Array(5)].map((_, i) => (
+            <Star key={i} size={12} className={i < Math.floor(rating) ? "fill-amber-500" : "text-slate-200"} />
+          ))}
+        </div>
+        <span className="text-[11px] font-black text-slate-900">{rating}/5</span>
+      </div>
     </div>
   );
 };
 
 export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary }) => {
   const baseScore = product.score || 8.5;
+  const productRating = product.rating || 4.5;
 
   /**
    * Nettoie les valeurs pour l'affichage (supprime les crochets JSONB, guillemets, etc.)
@@ -126,9 +133,9 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary }) => {
       </div>
 
       {/* Testimonials Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         {reviewsList.length > 0 ? reviewsList.slice(0, 4).map((text, i) => (
-          <ReviewItem key={i} text={text} index={i} />
+          <ReviewItem key={i} text={text} index={i} rating={productRating} />
         )) : (
           <div className="col-span-full py-32 text-center bg-white rounded-[3rem] border border-slate-100 shadow-sm">
              <Quote size={48} className="mx-auto text-slate-100 mb-6" />
