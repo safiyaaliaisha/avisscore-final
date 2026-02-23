@@ -302,8 +302,8 @@ export default function App() {
                       <h3 className="font-black text-sm text-slate-900 mb-4 line-clamp-2 h-10">{deal.title}</h3>
                       <div className="mt-auto flex items-center justify-between">
                         <div className="flex flex-col">
-                          <span className="text-rose-600 font-black text-xl">{deal.current_price.toFixed(2)}€</span>
-                          <span className="text-slate-400 line-through text-[10px] font-bold">{deal.reference_price.toFixed(2)}€</span>
+                          <span className="text-rose-600 font-black text-xl">{deal.current_price?.toFixed(2)}€</span>
+                          <span className="text-slate-400 line-through text-[10px] font-bold">{deal.reference_price?.toFixed(2)}€</span>
                         </div>
                         <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center group-hover:bg-blue-500 transition-colors">
                           <i className="fas fa-external-link-alt text-xs"></i>

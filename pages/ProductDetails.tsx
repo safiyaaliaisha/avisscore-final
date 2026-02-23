@@ -201,7 +201,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, onBac
                     <CheckCircle2 size={14} /> EN STOCK
                 </span>
                 {product.reference_price && product.reference_price > bestPrice && (
-                    <span className="text-rose-500 line-through text-sm font-bold">{product.reference_price.toFixed(2)}€</span>
+                    <span className="text-rose-500 line-through text-sm font-bold">{product.reference_price?.toFixed(2)}€</span>
                 )}
               </div>
             </div>
