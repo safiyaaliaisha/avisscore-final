@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Sparkles, Star, Quote, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { Product, ProductSummary } from '../types';
 
@@ -9,9 +9,12 @@ interface ReviewCardProps {
 }
 
 const ReviewItem: React.FC<{ text: string; index: number; rating?: number }> = ({ text, index, rating = 5 }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const sources = ['Expert Tech Mobile', 'Analyste Hardware', 'Testeur Communauté', 'Labo Performance', 'Journaliste Tech'];
   const source = sources[index % sources.length];
   
+  const isLong = text.length > 180;
+
   return (
     <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-200 hover:shadow-xl transition-all h-full flex flex-col relative overflow-hidden group">
       <div className="absolute top-0 right-0 p-4 opacity-5"><Quote size={80} /></div>
@@ -24,20 +27,33 @@ const ReviewItem: React.FC<{ text: string; index: number; rating?: number }> = (
           <p className="text-[9px] font-bold text-slate-400 uppercase">RÉCEMMENT</p>
         </div>
       </div>
-      <p className="text-slate-500 text-xs italic mb-6 line-clamp-6 leading-relaxed flex-1 relative z-10">"{text.trim()}"</p>
-      <div className="pt-6 border-t border-slate-50 flex items-center justify-between">
+      <div className="flex-1 relative z-10">
+        <p className={`text-slate-500 text-xs italic mb-4 leading-relaxed ${!isExpanded ? 'line-clamp-6' : ''}`}>
+          "{text.trim()}"
+        </p>
+        {isLong && (
+          <button 
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-[10px] font-black text-blue-600 uppercase tracking-widest hover:underline mb-6"
+          >
+            {isExpanded ? 'Voir moins' : 'Lire plus'}
+          </button>
+        )}
+      </div>
+      <div className="pt-6 border-t border-slate-50 flex items-center justify-between mt-auto">
         <div className="flex text-amber-500 gap-0.5">
           {[...Array(5)].map((_, i) => (
             <Star key={i} size={12} className={i < Math.floor(rating) ? "fill-amber-500" : "text-slate-200"} />
           ))}
         </div>
-        <span className="text-[11px] font-black text-slate-900">{rating}/5</span>
+        <span className="text-[11px] font-black text-slate-900">{rating}</span>
       </div>
     </div>
   );
 };
 
 export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary }) => {
+  const [visibleReviews, setVisibleReviews] = useState(4);
   const baseScore = product.score || 8.5;
   const productRating = product.rating || 4.5;
 
@@ -133,13 +149,26 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary }) => {
       </div>
 
       {/* Testimonials Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-        {reviewsList.length > 0 ? reviewsList.slice(0, 4).map((text, i) => (
-          <ReviewItem key={i} text={text} index={i} rating={productRating} />
-        )) : (
-          <div className="col-span-full py-32 text-center bg-white rounded-[3rem] border border-slate-100 shadow-sm">
-             <Quote size={48} className="mx-auto text-slate-100 mb-6" />
-             <p className="text-slate-400 font-black uppercase tracking-widest italic text-lg">Aucun témoignage textuel disponible.</p>
+      <div className="space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          {reviewsList.length > 0 ? reviewsList.slice(0, visibleReviews).map((text, i) => (
+            <ReviewItem key={i} text={text} index={i} rating={productRating} />
+          )) : (
+            <div className="col-span-full py-32 text-center bg-white rounded-[3rem] border border-slate-100 shadow-sm">
+               <Quote size={48} className="mx-auto text-slate-100 mb-6" />
+               <p className="text-slate-400 font-black uppercase tracking-widest italic text-lg">Aucun témoignage textuel disponible.</p>
+            </div>
+          )}
+        </div>
+        
+        {reviewsList.length > visibleReviews && (
+          <div className="flex justify-center pt-8">
+            <button 
+              onClick={() => setVisibleReviews(prev => prev + 8)}
+              className="bg-white border border-slate-200 text-slate-900 px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:border-blue-600 hover:text-blue-600 transition-all shadow-sm active:scale-95"
+            >
+              Lire la suite des avis
+            </button>
           </div>
         )}
       </div>

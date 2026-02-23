@@ -32,6 +32,9 @@ const getSpecIcon = (label: string) => {
   return <Info size={16} />;
 };
 
+const MotionImg = motion.img as any;
+const MotionDiv = motion.div as any;
+
 const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, onBack }) => {
   const [activeTab, setActiveTab] = useState<'summary' | 'specs' | 'faq'>('summary');
   
@@ -135,7 +138,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, onBac
         {/* Gallery */}
         <div className="space-y-4">
           <div className="aspect-square bg-white rounded-[3rem] border border-slate-100 shadow-2xl overflow-hidden flex items-center justify-center p-12 relative group/main">
-             <motion.img 
+             <MotionImg 
                 key={activeImage}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -171,7 +174,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, onBac
                     </span>
                 )}
             </div>
-            <h1 className="text-4xl md:text-6xl font-black text-slate-900 tracking-tighter leading-none">{product.name}</h1>
+            <h1 className="text-2xl md:text-4xl font-black text-slate-900 tracking-tighter leading-tight">{product.name}</h1>
             <div className="flex items-center gap-6 pb-6 border-b border-slate-100">
                <div className="flex text-amber-500 gap-1">
                 {[...Array(5)].map((_, i) => <Star key={i} size={18} className={i < Math.floor(product.rating || 4.5) ? "fill-amber-500" : "text-slate-200"} />)}
@@ -206,16 +209,34 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, onBac
               </a>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Verdict Section - Now standalone */}
+      <div className="mb-16 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-150">
+        <div className="bg-[#0F172A] rounded-[4rem] p-12 md:p-16 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-blue-600/10 to-transparent pointer-events-none"></div>
+          <div className="absolute -left-20 -top-20 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none"></div>
           
-          <div className="p-10 bg-slate-50 rounded-[3rem] border border-slate-100 relative overflow-hidden group hover:bg-white hover:shadow-2xl transition-all duration-500">
-            <div className="absolute top-0 right-0 p-8 opacity-5 text-blue-600 group-hover:scale-110 transition-transform"><Zap size={48} /></div>
-            <div className="flex items-center gap-3 mb-4 relative z-10">
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-ping"></div>
-                <h3 className="text-slate-400 text-[10px] font-black uppercase tracking-[0.4em]">Verdict Technique</h3>
+          <div className="relative z-10 flex flex-col md:flex-row items-center gap-12">
+            <div className="shrink-0">
+              <div className="w-24 h-24 rounded-[2rem] bg-blue-600 flex items-center justify-center text-white shadow-xl shadow-blue-600/20 rotate-3 group-hover:rotate-0 transition-transform duration-500">
+                <Zap size={40} />
+              </div>
             </div>
-            <p className="text-2xl font-bold text-slate-800 italic leading-relaxed relative z-10">
-              "{cleanVal(product.verdict_technique) || "Un produit qui redéfinit les standards de sa catégorie par son équilibre parfait entre performance et durabilité."}"
-            </p>
+            <div className="flex-1 space-y-6 text-center md:text-left">
+              <div className="flex items-center justify-center md:justify-start gap-3">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <h3 className="text-blue-400 text-[11px] font-black uppercase tracking-[0.5em]">Verdict Technique de l'Expert</h3>
+              </div>
+              <p className="text-2xl md:text-3xl font-bold text-white italic leading-tight tracking-tight">
+                "{cleanVal(product.verdict_technique) || "Un produit qui redéfinit les standards de sa catégorie par son équilibre parfait entre performance et durabilité."}"
+              </p>
+              <div className="flex items-center justify-center md:justify-start gap-4 pt-4">
+                <div className="h-px w-12 bg-white/10"></div>
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Analyse certifiée par AvisScore Lab</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -229,7 +250,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, onBac
             className={`py-8 text-[11px] font-black uppercase tracking-[0.4em] relative transition-colors ${activeTab === id ? 'text-blue-600' : 'text-slate-400 hover:text-slate-900'}`}
           >
             {id === 'summary' ? 'Analyse & Avis' : id === 'specs' ? 'Fiche Technique' : 'Questions / Réponses'}
-            {activeTab === id && <motion.div layoutId="activeTabDetails" className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-full" />}
+            {activeTab === id && <MotionDiv layoutId="activeTabDetails" className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-full" />}
           </button>
         ))}
       </div>
@@ -238,13 +259,13 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, onBac
       <div className="min-h-[600px] pb-20">
         <AnimatePresence mode="wait">
             {activeTab === 'summary' && (
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
                     <ReviewCard product={product} summary={summary} />
-                </motion.div>
+                </MotionDiv>
             )}
             
             {activeTab === 'specs' && (
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="bg-white rounded-[4rem] p-12 md:p-20 border border-slate-100 shadow-2xl">
+                <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="bg-white rounded-[4rem] p-12 md:p-20 border border-slate-100 shadow-2xl">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-16">
                         <div>
                             <h2 className="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-5">
@@ -276,11 +297,11 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, onBac
                             </div>
                         )}
                     </div>
-                </motion.div>
+                </MotionDiv>
             )}
 
             {activeTab === 'faq' && (
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-8">
+                <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-8">
                     <div className="text-center mb-16 space-y-4">
                         <h2 className="text-5xl font-black text-slate-900 tracking-tighter">Tout savoir sur le produit</h2>
                         <p className="text-slate-500 font-medium italic text-lg">Les réponses aux questions les plus posées par la communauté.</p>
@@ -307,7 +328,7 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, onBac
                             </div>
                         )}
                     </div>
-                </motion.div>
+                </MotionDiv>
             )}
         </AnimatePresence>
       </div>
