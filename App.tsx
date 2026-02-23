@@ -42,6 +42,7 @@ export default function App() {
   
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(8);
+  const [visibleDealsCount, setVisibleDealsCount] = useState(4);
   
   const heroSearchRef = useRef<HTMLDivElement>(null);
 
@@ -51,7 +52,7 @@ export default function App() {
       const [prods, revs, dealsData] = await Promise.all([
         fetchHomeProducts(100),
         fetchLatestCommunityReviews(4),
-        fetchDeals(4)
+        fetchDeals(100)
       ]);
       setPopularProducts(Array.isArray(prods) ? prods : []);
       setCommunityReviews(Array.isArray(revs) ? revs : []);
@@ -285,7 +286,7 @@ export default function App() {
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                  {deals.map((deal) => (
+                  {deals.slice(0, visibleDealsCount).map((deal) => (
                     <a 
                       key={deal.id} 
                       href={deal.link} 
@@ -312,6 +313,18 @@ export default function App() {
                     </a>
                   ))}
                 </div>
+
+                {deals.length > visibleDealsCount && (
+                  <div className="mt-16 flex justify-center">
+                    <button 
+                      onClick={() => setVisibleDealsCount(prev => prev + 8)}
+                      className="group bg-white border border-slate-200 text-slate-900 px-10 py-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.3em] flex items-center gap-4 hover:border-blue-600 hover:text-blue-600 transition-all shadow-sm hover:shadow-xl active:scale-95"
+                    >
+                      Charger plus d'offres
+                      <ChevronDown size={16} className="group-hover:translate-y-1 transition-transform" />
+                    </button>
+                  </div>
+                )}
               </section>
             )}
             
@@ -371,9 +384,57 @@ export default function App() {
         {['analyses-ia', 'api-pro', 'contact'].includes(view) && <main className="max-w-6xl mx-auto px-6 py-20"><FeaturePage type={view as any} onBack={() => navigateTo('home')} /></main>}
       </div>
 
-      <footer className="bg-white border-t border-slate-200 py-12 mt-auto">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.4em]">© 2025 AvisScore Lab. Tous droits réservés.</p>
+      <footer className="bg-white border-t border-slate-200 pt-20 pb-12 mt-auto">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+            <div className="col-span-1 md:col-span-1 space-y-6">
+              <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigateTo('home')}>
+                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                  <i className="fas fa-check-double text-white"></i>
+                </div>
+                <span className="text-slate-900 font-black text-2xl tracking-tighter">Avis<span className="text-blue-600 italic">score</span></span>
+              </div>
+              <p className="text-slate-500 text-xs font-medium leading-relaxed italic">
+                L'analyseur neural qui décode le web pour vous donner le score réel de chaque produit.
+              </p>
+            </div>
+            
+            <div className="space-y-6">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-900">Navigation</h4>
+              <ul className="space-y-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                <li><button onClick={() => navigateTo('home')} className="hover:text-blue-600 transition-colors">Accueil</button></li>
+                <li><button onClick={() => navigateTo('comparateur')} className="hover:text-blue-600 transition-colors">Comparateur</button></li>
+                <li><button onClick={() => navigateTo('analyses-ia')} className="hover:text-blue-600 transition-colors">Analyses IA</button></li>
+                <li><button onClick={() => navigateTo('api-pro')} className="hover:text-blue-600 transition-colors">API Pro</button></li>
+              </ul>
+            </div>
+
+            <div className="space-y-6">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-900">Légal</h4>
+              <ul className="space-y-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                <li><button onClick={() => navigateTo('privacy')} className="hover:text-blue-600 transition-colors">Confidentialité</button></li>
+                <li><button onClick={() => navigateTo('cookies')} className="hover:text-blue-600 transition-colors">Cookies</button></li>
+                <li><button onClick={() => navigateTo('terms')} className="hover:text-blue-600 transition-colors">Conditions</button></li>
+              </ul>
+            </div>
+
+            <div className="space-y-6">
+              <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-900">Support</h4>
+              <ul className="space-y-3 text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                <li><button onClick={() => navigateTo('contact')} className="hover:text-blue-600 transition-colors">Contact</button></li>
+                <li><a href="mailto:contact@avisscore.pro" className="hover:text-blue-600 transition-colors">Email Direct</a></li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="pt-12 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-6">
+            <p className="text-slate-400 text-[9px] font-black uppercase tracking-[0.4em]">© 2025 AvisScore Lab. Tous droits réservés.</p>
+            <div className="flex gap-6 text-slate-400">
+              <a href="#" className="hover:text-blue-600 transition-colors"><i className="fab fa-twitter"></i></a>
+              <a href="#" className="hover:text-blue-600 transition-colors"><i className="fab fa-linkedin"></i></a>
+              <a href="#" className="hover:text-blue-600 transition-colors"><i className="fab fa-github"></i></a>
+            </div>
+          </div>
         </div>
       </footer>
       <CookieConsent />
