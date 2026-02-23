@@ -4,7 +4,8 @@ import { Helmet } from 'react-helmet-async';
 import { 
   ArrowLeft, ShoppingCart, Star, Zap, Clock, Milestone, 
   HelpCircle, Flame, Palette, Layers, Hash, Factory, Maximize, 
-  Battery, Weight, Ruler, Brush, Type, Info, CheckCircle2, AlertCircle
+  Battery, Weight, Ruler, Brush, Type, Info, CheckCircle2, AlertCircle,
+  Scale
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Product, ProductSummary } from '../types';
@@ -15,6 +16,7 @@ interface ProductDetailsProps {
   summary: ProductSummary | null;
   popularProducts: Product[];
   onBack: () => void;
+  onCompare: () => void;
 }
 
 const getSpecIcon = (label: string) => {
@@ -35,7 +37,7 @@ const getSpecIcon = (label: string) => {
 const MotionImg = motion.img as any;
 const MotionDiv = motion.div as any;
 
-const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, onBack }) => {
+const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, onBack, onCompare }) => {
   const [activeTab, setActiveTab] = useState<'summary' | 'specs' | 'faq'>('summary');
   
   // Handling image_url as string or array
@@ -204,9 +206,17 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, onBac
               </div>
             </div>
             {product.affiliate_link && (
-              <a href={product.affiliate_link} target="_blank" rel="noopener noreferrer" className="w-full bg-[#0F172A] text-white h-20 rounded-[2rem] font-black uppercase tracking-widest flex items-center justify-center gap-4 shadow-2xl hover:bg-blue-600 transition-all active:scale-95 text-sm">
-                VOIR L'OFFRE PARTENAIRE <ShoppingCart size={20} />
-              </a>
+              <div className="space-y-4">
+                <a href={product.affiliate_link} target="_blank" rel="noopener noreferrer" className="w-full bg-[#0F172A] text-white h-20 rounded-[2rem] font-black uppercase tracking-widest flex items-center justify-center gap-4 shadow-2xl hover:bg-blue-600 transition-all active:scale-95 text-sm">
+                  VOIR L'OFFRE PARTENAIRE <ShoppingCart size={20} />
+                </a>
+                <button 
+                  onClick={onCompare}
+                  className="w-full bg-white border-2 border-slate-100 text-slate-900 h-16 rounded-[1.5rem] font-black uppercase tracking-widest flex items-center justify-center gap-4 hover:border-blue-600 hover:text-blue-600 transition-all active:scale-95 text-xs"
+                >
+                  COMPARER CE PRODUIT <Scale size={18} />
+                </button>
+              </div>
             )}
           </div>
         </div>

@@ -13,6 +13,7 @@ import { NotFound } from './components/NotFound';
 import { CookieConsent } from './components/CookieConsent';
 import { Navbar } from './components/Navbar';
 import ProductDetails from './pages/ProductDetails';
+import { ComparatorPage } from './pages/ComparatorPage';
 
 const StarRating = ({ rating, size = "xs" }: { rating: number; size?: string }) => {
   return (
@@ -353,14 +354,21 @@ export default function App() {
                   <p className="font-black text-slate-900 uppercase tracking-widest text-sm">Chargement Supabase...</p>
                </div>
             ) : selectedProduct ? (
-              <ProductDetails product={selectedProduct} summary={aiSummary} popularProducts={popularProducts} onBack={() => navigateTo('home')} />
+              <ProductDetails 
+                product={selectedProduct} 
+                summary={aiSummary} 
+                popularProducts={popularProducts} 
+                onBack={() => navigateTo('home')} 
+                onCompare={() => navigateTo('comparateur')}
+              />
             ) : null}
           </main>
         )}
 
         {view === 'not-found' && <NotFound onBack={() => navigateTo('home')} />}
+        {view === 'comparateur' && <main className="max-w-7xl mx-auto px-6 py-20"><ComparatorPage onBack={() => navigateTo('home')} initialProduct={selectedProduct} /></main>}
         {['privacy', 'cookies', 'terms'].includes(view) && <main className="max-w-4xl mx-auto px-6 py-20"><LegalPage type={view as any} onBack={() => navigateTo('home')} /></main>}
-        {['analyses-ia', 'comparateur', 'api-pro', 'contact'].includes(view) && <main className="max-w-6xl mx-auto px-6 py-20"><FeaturePage type={view as any} onBack={() => navigateTo('home')} /></main>}
+        {['analyses-ia', 'api-pro', 'contact'].includes(view) && <main className="max-w-6xl mx-auto px-6 py-20"><FeaturePage type={view as any} onBack={() => navigateTo('home')} /></main>}
       </div>
 
       <footer className="bg-white border-t border-slate-200 py-12 mt-auto">
