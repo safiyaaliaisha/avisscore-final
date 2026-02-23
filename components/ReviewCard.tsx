@@ -122,29 +122,51 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({ product, summary }) => {
 
   return (
     <div className="space-y-16">
-      {/* Summary Score Header */}
+      {/* Summary Score Header & FAQ */}
       <div className="bg-[#0F172A] p-12 md:p-20 rounded-[4rem] shadow-2xl relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-blue-600/20 to-transparent pointer-events-none"></div>
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-12">
-          <div className="max-w-2xl space-y-6">
-            <h2 className="text-4xl md:text-6xl font-black text-white tracking-tighter">Analyse Globale</h2>
-            <p className="text-slate-400 text-xl font-medium leading-relaxed italic">
-                {summary ? "Analyse neurale stabilisée. Nos algorithmes ont croisé plus de 50 sources spécialisées." : "Affichage des données Supabase. L'IA Gemini affine l'analyse en arrière-plan..."}
-            </p>
-            <div className="flex flex-wrap gap-4">
-                <span className="px-5 py-2 bg-white/5 border border-white/10 rounded-full text-[10px] font-black text-blue-400 uppercase tracking-widest flex items-center gap-2">
-                   {!summary && <Loader2 size={12} className="animate-spin" />} Neural Analysis 2.5
-                </span>
-                <span className="px-5 py-2 bg-white/5 border border-white/10 rounded-full text-[10px] font-black text-emerald-400 uppercase tracking-widest">Verified Sources</span>
+        
+        <div className="relative z-10 space-y-10">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 bg-blue-600 text-white rounded-[1.5rem] flex items-center justify-center shadow-2xl shadow-blue-600/20">
+                  <Quote size={32} />
+              </div>
+              <div>
+                <h3 className="text-2xl md:text-4xl font-black text-white tracking-tighter">Questions / Réponses Clés</h3>
+                <p className="text-slate-400 text-sm font-medium italic mt-1">Les points essentiels décryptés par nos experts.</p>
+              </div>
+            </div>
+            <div className="shrink-0 bg-white/5 backdrop-blur-3xl p-8 md:p-10 rounded-[3rem] border border-white/10 shadow-inner text-center transform hover:scale-105 transition-transform duration-500">
+              <span className="text-[9px] font-black text-blue-400 uppercase tracking-[0.5em] block mb-3">SCORE AVISCORE</span>
+              <span className="text-7xl font-black text-white tracking-tighter leading-none">{baseScore.toFixed(1)}</span>
+              <div className="mt-4 flex justify-center text-amber-500 gap-1">
+                  {[...Array(5)].map((_, i) => <Star key={i} size={16} className="fill-amber-500" />)}
+              </div>
             </div>
           </div>
-          <div className="shrink-0 bg-white/5 backdrop-blur-3xl p-12 rounded-[3.5rem] border border-white/10 shadow-inner text-center transform hover:scale-105 transition-transform duration-500">
-            <span className="text-[10px] font-black text-blue-400 uppercase tracking-[0.5em] block mb-4">SCORE AVISCORE</span>
-            <span className="text-8xl font-black text-white tracking-tighter leading-none">{baseScore.toFixed(1)}</span>
-            <div className="mt-6 flex justify-center text-amber-500 gap-1">
-                {[...Array(5)].map((_, i) => <Star key={i} size={20} className="fill-amber-500" />)}
+
+          {/* FAQ Inside Global Analysis */}
+          {parseJsonbArray(product.faq).length > 0 && (
+            <div className="pt-10 border-t border-white/5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                {parseJsonbArray(product.faq).slice(0, 4).map((f: any, i: number) => (
+                  <div key={i} className="bg-white/[0.03] backdrop-blur-sm p-6 md:p-8 rounded-[2rem] border border-white/5 hover:bg-white/5 transition-all group">
+                    <h4 className="font-black text-white mb-3 text-base leading-tight group-hover:text-blue-400 transition-colors flex items-start gap-3">
+                      <span className="text-blue-600 font-black text-xs mt-1">Q.</span>
+                      {clean(f.question || f.q || "Question sans titre")}
+                    </h4>
+                    <div className="flex gap-4">
+                      <div className="w-px bg-white/10 shrink-0 my-1"></div>
+                      <p className="text-slate-400 font-medium italic leading-relaxed text-sm">
+                        "{clean(f.answer || f.a || "Analyse en cours...")}"
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 

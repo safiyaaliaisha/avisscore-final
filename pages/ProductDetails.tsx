@@ -253,13 +253,18 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, onBac
 
       {/* Tabs Navigation */}
       <div className="sticky top-20 bg-[#f8f9fa]/80 backdrop-blur-xl z-40 border-b border-slate-100 flex gap-10 mb-12 overflow-x-auto scrollbar-hide px-4">
-        {['summary', 'specs', 'faq'].map(id => (
+        {['summary', 'specs']
+          .filter(id => {
+            if (id === 'specs') return specs.length > 0;
+            return true;
+          })
+          .map(id => (
           <button 
             key={id} 
             onClick={() => setActiveTab(id as any)} 
             className={`py-8 text-[11px] font-black uppercase tracking-[0.4em] relative transition-colors ${activeTab === id ? 'text-blue-600' : 'text-slate-400 hover:text-slate-900'}`}
           >
-            {id === 'summary' ? 'Analyse & Avis' : id === 'specs' ? 'Fiche Technique' : 'Questions / Réponses'}
+            {id === 'summary' ? 'Analyse & Avis' : 'Fiche Technique'}
             {activeTab === id && <MotionDiv layoutId="activeTabDetails" className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-full" />}
           </button>
         ))}
@@ -304,37 +309,6 @@ const ProductDetails: React.FC<ProductDetailsProps> = ({ product, summary, onBac
                             <div className="col-span-full py-32 text-center bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
                                 <Info size={48} className="mx-auto text-slate-200 mb-6" />
                                 <p className="text-slate-400 text-lg font-black uppercase tracking-widest italic">Analyse technique en cours...</p>
-                            </div>
-                        )}
-                    </div>
-                </MotionDiv>
-            )}
-
-            {activeTab === 'faq' && (
-                <MotionDiv initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-8">
-                    <div className="text-center mb-16 space-y-4">
-                        <h2 className="text-5xl font-black text-slate-900 tracking-tighter">Tout savoir sur le produit</h2>
-                        <p className="text-slate-500 font-medium italic text-lg">Les réponses aux questions les plus posées par la communauté.</p>
-                    </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {faqItems.map((f: any, i: number) => (
-                        <div key={i} className="p-10 bg-white rounded-[3rem] border border-slate-100 hover:border-blue-200 transition-all shadow-xl group">
-                            <div className="flex items-start gap-6">
-                                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 font-black text-lg">Q</div>
-                                <div>
-                                    <h4 className="font-black text-slate-900 mb-6 text-xl leading-tight group-hover:text-blue-600 transition-colors">{cleanVal(f.question || f.q || "Question sans titre")}</h4>
-                                    <div className="flex gap-6">
-                                        <div className="w-px bg-slate-100 shrink-0"></div>
-                                        <p className="text-slate-600 font-medium leading-relaxed text-lg italic">"{cleanVal(f.answer || f.a || "Notre équipe d'experts prépare actuellement une réponse détaillée pour ce point précis.")}"</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        ))}
-                        {faqItems.length === 0 && (
-                            <div className="col-span-full text-center py-24 bg-white rounded-[3rem] border border-slate-100">
-                                <HelpCircle size={48} className="mx-auto text-slate-100 mb-6" />
-                                <p className="text-slate-400 font-black uppercase tracking-widest italic">Aucune question n'a encore été posée.</p>
                             </div>
                         )}
                     </div>
