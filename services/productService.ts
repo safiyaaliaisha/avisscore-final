@@ -1,6 +1,6 @@
 
 import { supabase } from '../lib/supabaseClient';
-import { Product } from '../types';
+import { Product, Deal } from '../types';
 
 export const fetchHomeProducts = async (limit = 100): Promise<Product[]> => {
   try {
@@ -101,5 +101,20 @@ export const fetchFullProductData = async (
     return { data: null, error: "Non trouvé" };
   } catch (err: any) {
     return { data: null, error: err.message };
+  }
+};
+
+export const fetchDeals = async (limit = 4): Promise<Deal[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('deals')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return (data as Deal[]) || [];
+  } catch (error) {
+    console.error("Fetch deals error:", error);
+    return [];
   }
 };

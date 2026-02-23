@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Sparkles, Quote, ChevronDown } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
-import { fetchFullProductData, fetchHomeProducts, fetchLatestCommunityReviews } from './services/productService';
+import { fetchFullProductData, fetchHomeProducts, fetchLatestCommunityReviews, fetchDeals } from './services/productService';
 import { getAIReviewSummary } from './services/geminiService';
 import { Product, ProductSummary, Deal } from './types';
 import { LegalPage } from './components/LegalPages';
@@ -33,6 +33,7 @@ export default function App() {
   const [showResults, setShowResults] = useState(false);
   const [popularProducts, setPopularProducts] = useState<Product[]>([]);
   const [communityReviews, setCommunityReviews] = useState<any[]>([]);
+  const [deals, setDeals] = useState<Deal[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [aiSummary, setAiSummary] = useState<ProductSummary | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,12 +47,14 @@ export default function App() {
   const loadHomeData = useCallback(async () => {
     setIsHomeLoading(true);
     try {
-      const [prods, revs] = await Promise.all([
+      const [prods, revs, dealsData] = await Promise.all([
         fetchHomeProducts(100),
-        fetchLatestCommunityReviews(4)
+        fetchLatestCommunityReviews(4),
+        fetchDeals(4)
       ]);
       setPopularProducts(Array.isArray(prods) ? prods : []);
       setCommunityReviews(Array.isArray(revs) ? revs : []);
+      setDeals(Array.isArray(dealsData) ? dealsData : []);
     } catch (e) {
       console.error("Home loading error:", e);
     } finally {
@@ -271,6 +274,45 @@ export default function App() {
                 </div>
               )}
             </section>
+
+            {deals.length > 0 && (
+              <section className="max-w-7xl mx-auto px-6 pb-20">
+                <div className="flex items-center justify-between mb-12">
+                  <div>
+                    <h2 className="text-4xl font-black text-[#111] tracking-tighter mb-2">Meilleures Offres</h2>
+                    <p className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400">LES PRIX LES PLUS BAS DU MOMENT</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                  {deals.map((deal) => (
+                    <a 
+                      key={deal.id} 
+                      href={deal.link} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all flex flex-col group"
+                    >
+                      <div className="relative h-48 w-full flex items-center justify-center mb-6 bg-slate-50 rounded-2xl overflow-hidden p-4">
+                        <img src={deal.image_url} alt={deal.title} className="max-h-full max-w-full object-contain group-hover:scale-110 transition-transform duration-500" />
+                        <div className="absolute top-4 right-4 bg-rose-600 text-white px-3 py-1 rounded-full text-[10px] font-black">
+                          -{deal.discount}%
+                        </div>
+                      </div>
+                      <h3 className="font-black text-sm text-slate-900 mb-4 line-clamp-2 h-10">{deal.title}</h3>
+                      <div className="mt-auto flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <span className="text-rose-600 font-black text-xl">{deal.current_price.toFixed(2)}€</span>
+                          <span className="text-slate-400 line-through text-[10px] font-bold">{deal.reference_price.toFixed(2)}€</span>
+                        </div>
+                        <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center group-hover:bg-blue-500 transition-colors">
+                          <i className="fas fa-external-link-alt text-xs"></i>
+                        </div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
             
             <section className="bg-slate-100/30 pt-20 pb-32 border-y border-slate-200">
               <div className="max-w-7xl mx-auto px-6">
